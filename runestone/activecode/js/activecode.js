@@ -19,6 +19,251 @@ import "./activecode-i18n.en.js";
 import "./../css/activecode.css";
 import "codemirror/lib/codemirror.css";
 
+// Get the current webpage's url
+var currentUrl = window.location.href;
+var currentHash = window.location.hash;
+if (currentHash != ""){currentUrl = currentUrl.split("#")[0];}
+
+function buildGlobalMenu() {
+    // Add the global menu to each page
+    let rightNav = $('.navbar-right');
+    var menu = document.createElement('li');
+    menu.title = "Show Discussion";
+    menu.onclick = function () {                 
+        changeNav();
+    };
+
+    // Add menu button in the top toolbar
+    var menuInnerA = document.createElement('a');
+    menuInnerA.href = "#";
+    menuInnerA.id = "globalMenu";
+    var globalMenu = document.createElement('i');
+    $(globalMenu).addClass("glyphicon glyphicon-th-list");
+    $(globalMenu).css("opacity", "0.9");
+    menuInnerA.appendChild(globalMenu);
+    // Add the discussion count in the button
+    var menuInnerB = document.createElement('a');
+    menuInnerB.id = "globalCount";
+    menuInnerB.innerHTML = "0";
+    menuInnerB.setAttribute(
+        "style",
+        "height: 16px; min-width: 16px; border-radius: 16px; line-height: 16px; \
+         padding: 0 2px; font-size: 12px; font-weight: bold; text-align: center; \
+         position: absolute; top: 3px; right: 2px; background-color: red; \
+         color: white; display: none;"
+    );
+    menu.appendChild(menuInnerA);
+    menu.appendChild(menuInnerB);
+    // Add the element to the html file
+    rightNav.prepend(menu);
+
+    // Create the sidebar to display the discussion items
+    var sideBar = document.createElement('div');
+    sideBar.id = "sideBar";
+    sideBar.setAttribute(
+        "style",
+        "height: 100%; width: 0; position: fixed; z-index: 1; \
+         top: 0; left: 0; background-color: #eeeeee; overflow-x: hidden; \
+         transition: 0.5s;"
+    );
+    var topInfo = document.createElement('div');
+    topInfo.id = "topInfo";
+    topInfo.setAttribute(
+        "style",
+        "background: #fff; height: 40px; z-index: 9999; \
+         top: 0px; border-bottom: 2px solid #dbdbdb; font-size: 23px;"
+    );
+    topInfo.innerHTML = "&nbsp;<span class='glyphicon glyphicon-info-sign' aria-hidden='true'></span>  &nbsp; Discussion List";
+    sideBar.appendChild(topInfo);
+
+    // Create the separate bar of the background
+    var backBar = document.createElement('div');
+    backBar.id = "backBar";
+    backBar.setAttribute(
+        "style",
+        "background: rgba(0,0,0,.08); position: fixed; height: 100%; \
+         width: 22px; left: 0; transition: 0.5s; pointer-events: none;"
+    );
+
+    // Create the side button to open and close the sidebar
+    var closeButton = document.createElement('button');
+    closeButton.id = "closeButton";
+    closeButton.title = "Show Discussion";
+    $(closeButton).addClass("glyphicon glyphicon-chevron-right");
+    closeButton.setAttribute(
+        "style",
+        "position: absolute; z-index: 1; left: 0px; top: 0; transition: 0.5s; \
+         width: 36px; height: 40px; border: solid 2px #dbdbdb; outline: none;\
+         background: #fff; color: #9c9c9c; border-style: none solid solid none;"
+    );
+    closeButton.onclick = function () {
+        changeNav();
+    };
+    rightNav.prepend(sideBar);
+    rightNav.prepend(backBar);
+    rightNav.prepend(closeButton);
+
+    // Create the bottom-right pop window    
+    var popWindow = document.createElement('div');
+    popWindow.id = "popWindow";
+    var closeWindow = document.createElement('a');
+    closeWindow.href = "javascript:void(0)";
+    $(closeWindow).addClass("glyphicon glyphicon-remove");
+    $(closeWindow).css("font-size", "25px");
+    $(closeWindow).css("color", "black");
+    closeWindow.onclick = function () {
+        document.getElementById("popWindow").style.display = "None";
+    };
+    popWindow.appendChild(closeWindow);
+    popWindow.setAttribute(
+        "style",
+        "position: fixed; z-index: 10; right: 20px; bottom: 20px; \
+         display: none; border-style: solid solid solid solid; \
+         border: solid 2px black; background-color: white;"
+    );
+    rightNav.prepend(popWindow);
+}
+
+function changeNav() {
+    var target = document.getElementById("sideBar");
+    if (target.style.width == "0px"){
+        // the sidebar is closed, button to open the sidebar
+        target.style.width = "300px";
+        document.getElementById("closeButton").style.left = "300px";
+        document.getElementById("closeButton").className = "glyphicon glyphicon-chevron-left";
+        document.getElementById("backBar").style.left = "300px";
+
+        // once open the menu, the globalMenu button will disappear style
+        document.getElementById("globalCount").style.display = "none";
+        document.getElementById("globalCount").innerHTML = "0";
+        document.getElementById("globalMenu").style.color = "";
+    } else {
+        // the sidebar is open, button to close the sidebar
+        target.style.width = "0px";
+        document.getElementById("closeButton").style.left = "0px";
+        document.getElementById("closeButton").className = "glyphicon glyphicon-chevron-right";
+        document.getElementById("backBar").style.left = "0px";
+    }
+}
+
+$(document).bind("runestone:login-complete",buildGlobalMenu);
+
+class ShareDBCodeMirrorBinding {
+    constructor(codeMirror, doc) {
+        this.suppressChanges = false;
+        this.initialFetchCallbacks = [];
+        this.gotInitialFetch = false;
+        this.doc = doc;
+        this.editorDoc = codeMirror.getDoc();
+        this.codeMirror = codeMirror;
+
+        this.$onSDBDocEvent = this.onSDBDocEvent.bind(this);
+        this.$updateDoc = this.updateDoc.bind(this);
+        this.$onCodeMirrorChange = this.onCodeMirrorChange.bind(this);
+
+        this.doc.on("op", this.$updateDoc);
+        this.doc.subscribe(this.$onSDBDocEvent);
+        this.codeMirror.on("change", this.$onCodeMirrorChange);
+    }
+
+    updateDoc(ops, source) {
+        this.suppressChanges = true;
+        if (!source) {
+            ops.forEach((op) => this.applyOp(op));
+        }
+        this.suppressChanges = false;
+    }
+
+    destroy() {
+        this.doc.unsubscribe(this.$onSDBDocEvent);
+        this.codeMirror.off("change", this.$onCodeMirrorChange);
+        this.doc.removeListener("op", this.$updateDoc);
+    }
+
+    onSDBDocEvent(type, ops, source) {
+        this.suppressChanges = true;
+        if (!type) {
+            const data = this.doc.data.code;
+            this.codeMirror.setValue(data);
+            this.gotInitialFetch = true;
+            this.initialFetchCallbacks.forEach((callback) => callback());
+            this.initialFetchCallbacks.splice(0, this.initialFetchCallbacks.length);
+        } else if (type === "op") {
+            if (source !== this) {
+                ops.forEach((op) => this.applyOp(op));
+            }
+        }
+
+        this.suppressChanges = false;
+    }
+
+    onCodeMirrorChange(codeMirror, change) {
+        if (!this.suppressChanges) {
+            const ops = this.createOpFromChange(change);
+            this.doc.submitOp(ops, this);
+        }
+    }
+
+    onInitialFetch(callback) {
+        if (this.gotInitialFetch) {
+            callback();
+        } else {
+            this.initialFetchCallbacks.push(callback);
+        }
+    }
+
+    assertValue() {
+        const editorValue = this.codeMirror.getValue();
+        const expectedValue = this.doc.getData();
+        if (editorValue !== expectedValue) {
+            console.error(
+                `Expected value (${expectedValue}) did not match editor value (${editorValue})`
+            );
+            this.codeMirror.setValue(expectedValue);
+        }
+    }
+
+    applyOp(op) {
+        const editorDoc = this.editorDoc;
+        const { si, sd, p } = op;
+        const index = p[1];
+
+        if (si) {
+            editorDoc.replaceRange(si, editorDoc.posFromIndex(index));
+        } else if (sd) {
+            const from = editorDoc.posFromIndex(index);
+            const to = editorDoc.posFromIndex(index + sd.length);
+            editorDoc.replaceRange("", from, to);
+        }
+        this.assertValue.bind(this);
+    }
+
+    createOpFromChange(change) {
+        const op = [];
+        let textIndex = 0;
+        const startLine = change.from.line;
+
+        for (let i = 0; i < startLine; i++) {
+            textIndex += this.codeMirror.lineInfo(i).text.length + 1;
+        }
+
+        textIndex += change.from.ch;
+
+        if (change.to.line !== change.from.line || change.to.ch !== change.from.ch) {
+            const removed = change.removed.join("\n");
+            op.push({ p: ["code", textIndex], sd: removed });
+        }
+
+        if (change.text) {
+            const text = change.text.join("\n");
+            if (text) {
+                op.push({ p: ["code", textIndex], si: text });
+            }
+        }
+        return op;
+    }
+}
+
 var isMouseDown = false;
 document.onmousedown = function () {
     isMouseDown = true;
@@ -31,6 +276,12 @@ window.edList = {};
 
 var socket, connection, doc;
 var chatcodesServer = "chat.codes";
+
+
+var newUser = "User" + Math.floor(Math.random() * 100);
+var socket_mini, connection_mini;
+var socket_codecontent, connection_codecontent;
+
 
 // separate into constructor and init
 export class ActiveCode extends RunestoneBase {
@@ -84,6 +335,23 @@ export class ActiveCode extends RunestoneBase {
                 doc = connection.get("chatcodes", "channels");
             }
         }
+
+        // for usernames
+        if (!socket_mini) {
+            socket_mini = new WebSocket("ws://localhost:3000");
+        }
+        if (!connection_mini) {
+            connection_mini = new sharedb.Connection(socket_mini);
+        }
+
+        // for code content
+        if (!socket_codecontent) {
+            socket_codecontent = new WebSocket("ws://localhost:3000");
+        }
+        if (!connection_codecontent) {
+            connection_codecontent = new sharedb.Connection(socket_codecontent);
+        }
+
         if (this.graderactive) {
             this.hidecode = false;
         }
@@ -112,21 +380,52 @@ export class ActiveCode extends RunestoneBase {
 
     createEditor(index) {
         this.containerDiv = document.createElement("div");
+        this.containerDiv.setAttribute("href", "#" + this.divid);
         var linkdiv = document.createElement("div");
         linkdiv.id = this.divid.replace(/_/g, "-").toLowerCase(); // :ref: changes _ to - so add this as a target
         $(this.containerDiv).addClass("ac_section alert alert-warning");
+        // code window
         var codeDiv = document.createElement("div");
         $(codeDiv).addClass("ac_code_div col-md-12");
+        codeDiv.id = "code" + this.divid;
+        // discussion window
+        var discussionDiv = document.createElement("div");
+        discussionDiv.id = "discussionDiv" + this.divid;
+        $(discussionDiv).addClass("col-md-12");
+        $(discussionDiv).css("display", "none");
+        $(discussionDiv).css("height", "420px");
+        $(discussionDiv).css("overflow", "auto");
+
+        // var diffDiv = document.createElement("div");
+        // diffDiv.id = "diffDiv" + this.divid;
+        // $(diffDiv).addClass("col-md-12");
+        // $(diffDiv).css("display", "none");
+        // $(diffDiv).css("padding-bottom", "15px");
+        // var diffInnerDiv = document.createElement("div");
+        // diffInnerDiv.id = "diffInnerDiv" + this.divid;
+        // $(diffInnerDiv).addClass("col-md-12");
+        // $(diffInnerDiv).css("background", "#ffffff");
+        // $(diffInnerDiv).css("border", "solid 2px #dbdbdb");
+        // $(diffInnerDiv).css("max-height", "300px");
+        // $(diffInnerDiv).css("overflow", "auto");
+        // diffDiv.appendChild(diffInnerDiv);
+
+        // this.diffDiv = diffDiv;
+        // this.diffInnerDiv = diffInnerDiv;
         this.codeDiv = codeDiv;
+        this.discussionDiv = discussionDiv;
         this.containerDiv.id = this.divid;
         this.containerDiv.lang = this.language;
         this.outerDiv = this.containerDiv;
+
         $(this.origElem).replaceWith(this.containerDiv);
         if (linkdiv.id !== this.divid) {
             // Don't want the 'extra' target if they match.
             this.containerDiv.appendChild(linkdiv);
         }
         this.containerDiv.appendChild(codeDiv);
+        // this.containerDiv.appendChild(diffDiv);
+        this.containerDiv.appendChild(discussionDiv);
         var edmode = this.containerDiv.lang;
         if (edmode === "sql") {
             edmode = "text/x-sql";
@@ -208,6 +507,7 @@ export class ActiveCode extends RunestoneBase {
         }
     }
     createControls() {
+        var edmode = this.containerDiv.lang;
         var ctrlDiv = document.createElement("div");
         var butt;
         $(ctrlDiv).addClass("ac_actions");
@@ -376,6 +676,1187 @@ export class ActiveCode extends RunestoneBase {
                 }.bind(this)
             );
         }
+
+
+
+        // TODO: new code begins here !!!
+        
+         // back to my own code
+        var thisCodeProblem;
+        var myCode = document.createElement("button");
+        $(myCode).addClass("ac_opt btn btn-default");
+        $(myCode).text("My Code");
+        $(myCode).css("margin-left", "10px");
+        ctrlDiv.appendChild(myCode);
+        var editor = this.editor;
+
+        this.docMyCode = connection_codecontent.get(this.divid + newUser, "mycode");
+        const currentCodeDoc = this.docMyCode;
+        const problem_id = this.divid;
+
+        currentCodeDoc.fetch(function (err) {
+            if (err) throw err;
+            if (currentCodeDoc.type === null) {
+                currentCodeDoc.create(
+                    {
+                        code: editor.getValue(),
+                    },
+                    acallback
+                );
+                return;
+            }
+            acallback();
+        });
+
+        function acallback() {
+            thisCodeProblem = new ShareDBCodeMirrorBinding(editor, currentCodeDoc);
+        }
+
+        // connected users
+        var helpSession = connection_mini.get(problem_id, "helpSessionUser");
+        
+        var currentDocForHelpSession = helpSession;
+
+        var connectedUserDiv = document.createElement("div");
+        connectedUserDiv.id = "helpSession" + problem_id;
+
+        ctrlDiv.appendChild(connectedUserDiv);
+
+        // select answer position
+        var answerInputSelectStart;
+        var answerInputSelectEnd;
+        var codePointer = new Array();
+        var currentQuest;
+        var currentCode;
+        var currentQuestIndex;
+
+        // add script
+        // var newScript = document.createElement("script");
+        // var inlineScript = document.createTextNode('function highlightCodeSelected(problemid,codestartline, codestartch,codeendline,codeendch) {$("#code" + problemid).children("div").remove(); var editor = CodeMirror.fromTextArea(document.getElementById("codeTextArea" + problemid), { lineNumbers: true, styleSelectedText: true }); console.log(editor);editor.getDoc().markText({line: codestartline, ch: codestartch}, {line: codeendline, ch: codeendch}, {css: "background: yellow"});}');
+        // newScript.appendChild(inlineScript); 
+        // ctrlDiv.appendChild(newScript);
+
+        // help session
+
+        // button for add new discussion
+        const helpButton = document.createElement("button");
+        $(helpButton).addClass("ac_opt btn btn-default");
+        $(helpButton).text("Help");
+        $(helpButton).css("margin-left", "10px");
+        ctrlDiv.appendChild(helpButton);
+            
+        // button for cancel the input box
+        const cancelButton = document.createElement("button");
+        $(cancelButton).addClass("ac_opt btn btn-default");
+        $(cancelButton).text("Cancel");
+        $(cancelButton).css("margin-right", "10px");
+        $(cancelButton).css("float", "right");
+        cancelButton.style.display = 'none';
+        cancelButton.id = "cancelButton" + problem_id;
+        ctrlDiv.appendChild(cancelButton);
+
+        // button for cancel the highlight
+        const cancelHighLightButton = document.createElement("button");
+        $(cancelHighLightButton).addClass("ac_opt btn btn-default");
+        $(cancelHighLightButton).text("Cancel HighLight");
+        $(cancelHighLightButton).css("margin-right", "10px");
+        $(cancelHighLightButton).css("float", "right");
+        cancelHighLightButton.style.display = 'none';
+        cancelHighLightButton.id = "cancelHighLightButton" + problem_id;
+        ctrlDiv.appendChild(cancelHighLightButton);
+
+        // button for back to live answer code
+        const liveCodeButton = document.createElement("button");
+        $(liveCodeButton).addClass("ac_opt btn btn-default");
+        $(liveCodeButton).text("Live Code");
+        $(liveCodeButton).css("margin-right", "10px");
+        $(liveCodeButton).css("float", "right");
+        liveCodeButton.style.display = 'none';
+        liveCodeButton.id = "liveCodeButton" + problem_id;
+        ctrlDiv.appendChild(liveCodeButton);
+
+        // discussion session
+
+        // question list
+        var questions = document.createElement("div");
+        questions.id ="questions" + problem_id;
+        questions.setAttribute(
+            "style",
+            "list-style-type: none; margin: 0; padding: 0; \
+            display:block; overflow-y:scroll; max-height: 225px; \
+            background: ivory;"
+        );
+        this.discussionDiv.appendChild(questions);
+            
+        const inputDiv = document.createElement("div");
+        inputDiv.id = "inputDiv" + problem_id;
+        inputDiv.setAttribute(
+            "style",
+            "position: absolute; bottom: 0; \
+            width: 98%;  height: 20%; display: none;"
+        );
+
+        // question input div
+        const inputQuest = document.createElement("div");
+        inputQuest.id = "inputQuest" + problem_id;
+        inputQuest.setAttribute(
+            "style",
+            "width: 80%; box-sizing: border-box; float: left;"
+        );
+
+        // input CodeMirror source text
+        const inputTextArea = document.createElement("textarea");
+        inputTextArea.id = "inputTextArea" + this.divid;
+        inputQuest.appendChild(inputTextArea);
+        inputDiv.appendChild(inputQuest);
+
+        // question submit button
+        const submitButton = document.createElement("button");
+        $(submitButton).addClass("ac_opt btn btn-primary");
+        $(submitButton).css("box-sizing", "border-box");
+        $(submitButton).css("display", "block");
+        $(submitButton).text("Submit Question");
+        submitButton.id = "submitButton" + problem_id;
+
+        submitButton.onclick = function () {                 
+            addNewDiscussionSession(problem_id);
+        };
+
+        const buttonListDiv = document.createElement("div");
+        $(buttonListDiv).css("width", "18%");
+        $(buttonListDiv).css("float", "left");
+        buttonListDiv.appendChild(submitButton);
+
+        // answer code link button
+        /*
+        const answerLinkButton = document.createElement("button");
+        $(answerLinkButton).addClass("ac_opt btn btn-primary");
+        $(answerLinkButton).text("Link");
+        $(answerLinkButton).css("box-sizing", "border-box");
+        $(answerLinkButton).css("display", "none");
+        */
+
+        const answerLinkButton = document.createElement("button");
+        $(answerLinkButton).addClass("ac_opt btn btn-default glyphicon glyphicon-paperclip");
+        $(answerLinkButton).css("box-sizing", "border-box");
+        $(answerLinkButton).css("display", "none");
+        answerLinkButton.id = "answerLinkButton" + problem_id;
+
+        answerLinkButton.onclick = function () {                 
+            addNewCodeLink();
+        };
+        buttonListDiv.appendChild(answerLinkButton);
+
+        // answer submit button
+        const answerSubmitButton = document.createElement("button");
+        $(answerSubmitButton).addClass("ac_opt btn btn-primary");
+        $(answerSubmitButton).css("box-sizing", "border-box");
+        $(answerSubmitButton).css("display", "none");
+        $(answerSubmitButton).text("Submit Answer");
+        answerSubmitButton.id = "answerSubmitButton" + problem_id;
+
+        answerSubmitButton.onclick = function () {                 
+            addNewDiscussionAnswer();
+        };
+        buttonListDiv.appendChild(answerSubmitButton);
+        inputDiv.appendChild(buttonListDiv);
+        this.discussionDiv.appendChild(inputDiv);
+
+        const enterNotice = document.createElement("div");
+        $(enterNotice).css("position", "absolute");
+        $(enterNotice).css("bottom", "0px");
+        enterNotice.innerHTML = "Enter to send / Shift+Enter to enter a new line";
+        this.discussionDiv.appendChild(enterNotice);
+
+        // create input code mirror
+        var inputCodeMirror = CodeMirror.fromTextArea(document.getElementById("inputTextArea" + this.divid), {
+            lineWrapping: true,
+            styleSelectedText: true,
+            mode: edmode,
+            indentUnit: 4,
+            matchBrackets: true,
+            autoMatchParens: true,
+            extraKeys: { Tab: "indentMore", 
+                        "Shift-Tab": "indentLess", 
+                        "Enter": function () 
+                                {                 
+                                    addNewDiscussionSessAns(problem_id);
+                                }
+                        },
+        });
+
+        inputCodeMirror.setSize(600, 65);
+        var disSession = connection_mini.get(problem_id, "helpsession_discussion");
+        var currentDocForDiscussion = disSession;
+        currentDocForDiscussion.fetch(function(err) {
+            if(err) throw err;
+            currentDocForDiscussion.subscribe(showAllDiscussionSession);
+            currentDocForDiscussion.on("op", showAllDiscussionSession);
+            currentDocForDiscussion.on("create", showAllDiscussionSession);
+        });
+        
+
+        // TODO: need to set each unique user a unique discussion list and discussion window !
+        var discussionList = connection_mini.get('discussion', 'list');
+        var discussionWindow = connection_mini.get('discussion', 'window');
+        // create a table of user information
+        //var userInfoTable = connection_mini.get('user', 'info');
+
+
+        if (discussionWindow.type === null) {
+            discussionWindow.create([]);
+            var windowInfo = {
+                size: 0,
+            }
+            discussionWindow.submitOp([{ p: [0], li: windowInfo}]);
+        }
+
+        /*
+        if (userInfoTable.type === null) {
+            userInfoTable.create([]);
+            var userInfo = {
+                // info 1: newUser + problem_id indicating whether this user finished this problem
+                info: [],
+            }
+            userInfoTable.submitOp([{ p: [0], li: userInfo}]);
+        }
+        */
+
+
+        // add the new discussion to the sideBar
+        discussionList.fetch(function(err) {
+            if(err) throw err;
+            discussionList.subscribe(showAllDiscussionList);
+            discussionList.on("op", showAllDiscussionList);
+            discussionList.on("create", showAllDiscussionSession);
+        });
+
+        function showAllDiscussionList() {
+            //console.log(problem_id);
+            //console.log("gegsegsgsdr");
+            // TODO: now each user's discussion list is the same
+            if (discussionList.type != null) {
+                var list = document.getElementById("sideBar");
+                while(list.lastChild){
+                    list.removeChild(list.lastChild);
+                }
+                discussionList.data.forEach((session) =>{
+                    var question = session.question;
+                    var chapter = session.chapter;
+                    var listIndex = session.listIndex;
+                    var time = session.time.split(",")[0];
+                    var problemId = session.problemId.split("_")[2];
+                    const search = document.getElementById("discussionList" + session.id);
+                    if (!search) {
+                        var contentA = document.createElement("a");
+                        contentA.href = session.url;
+                        $(contentA).css("text-decoration",  "none");
+                        var content = document.createElement("div");
+                        // outer div
+                        content.id = "discussionList" + session.id;
+                        $(content).css("border-bottom", "2px solid #dbdbdb");
+                        $(content).css("cursor", "pointer");
+                        // inner right div
+                        var rightContent = document.createElement("div");
+                        $(rightContent).css("float", "right");
+                        $(rightContent).css("color", "#888");
+                        $(rightContent).css("margin-right", "3px");
+                        rightContent.innerHTML = time;
+
+                        // inner left div
+                        var leftContent = document.createElement("div");
+                        leftContent.setAttribute(
+                            "style", 
+                            "margin-left: 10px; margin-right: 60px; word-break:break-all;"
+                        );
+
+                        var leftA = document.createElement("div");
+                        leftA.id = "discussionList" + session.id + "leftA";
+                        var leftB = document.createElement("div");
+                        var leftC = document.createElement("div");
+                        leftA.setAttribute(
+                            "style", 
+                            "font-size: 16px; font-weight: bold; line-height: 16px; margin-bottom:2px;"
+                        );
+                        leftA.innerHTML = "Q:" + question;
+                        leftB.setAttribute(
+                            "style", 
+                            "font-size:14px;color: #80858A;"
+                        );
+                        leftB.innerHTML = chapter;
+                        leftC.setAttribute(
+                            "style", 
+                            "font-size:12px;color: #80858A;"
+                        );
+                        leftC.innerHTML = "Activity: " + problemId + " " + "Index: " +  listIndex;
+                        leftContent.appendChild(leftA);
+                        leftContent.appendChild(leftB);
+                        leftContent.appendChild(leftC);
+
+
+                        content.appendChild(rightContent);
+                        content.appendChild(leftContent);
+
+
+                        content.onclick = function () {
+                            readDiscussionList(session.index);
+                        };
+
+                        $(content).mousemove(function(){
+                            $(content).css("background-color","#FFF8DC");
+                        });
+            
+
+                        if (!session.clicked) {
+                            $(content).css("background-color", "#FEF3F3");
+                            $(leftA).css("color", "#900");
+                            $(content).mouseleave(function(){
+                                $(content).css("background-color","#FEF3F3");
+                            });
+
+                        } else {
+                            $(content).css("background-color", "white");
+                            $(leftA).css("color", "#30424D");
+                            $(content).mouseleave(function(){
+                                $(content).css("background-color","white");
+                            });
+                        }
+                        contentA.appendChild(content);
+                        list.prepend(contentA);
+
+                    } else {
+                        // check if it needs to change the color
+                        if (session.clicked) {
+                            document.getElementById("discussionList" + session.id + "leftA").style.color = "#30424D";
+                            $(search).css("background-color", "white");
+                            $(search).mouseleave(function(){
+                                $(search).css("background-color","white");
+                            });
+                        }
+                    }
+                })
+
+
+                var topInfo = document.createElement('div');
+                topInfo.id = "topInfo";
+                topInfo.setAttribute(
+                    "style",
+                    "background: #fff; height: 40px; z-index: 9999; \
+                    top: 0px; border-bottom: 2px solid #dbdbdb; font-size: 23px;"
+                );
+                topInfo.innerHTML = "&nbsp;<span class='glyphicon glyphicon-info-sign' aria-hidden='true'></span>  &nbsp; Discussion List";
+                if (!document.getElementById("topInfo")){
+                    list.prepend(topInfo);
+                }
+
+
+                if (discussionWindow.type != null){
+                    // var userInfoTable = connection_mini.get('user', 'info');
+                    
+                    if (discussionWindow.data[0].size != discussionList.data.length) {
+                        
+                        var countCircle = document.getElementById("globalCount");
+                        var count = parseInt(countCircle.innerHTML);
+                        $(countCircle).css("display", "");
+                        countCircle.innerHTML = (count+1).toString();
+                        document.getElementById("globalMenu").style.color = "red";
+
+                        const currentLength = discussionList.data.length;
+                        discussionWindow.data[0].size = currentLength;
+                        discussionWindow.submitOp([{p: [0], ld: discussionWindow.data[0], li: discussionWindow.data[0]}]);
+                        
+                        // the current user has already run this problem, then display the pop window
+                        // the current user is not the user who asked this problem, then display the pop window
+                        var newDiscussion = discussionList.data[currentLength-1];
+                        // var newDiscussion = discussionList.data[0];
+                        var target = newUser + newDiscussion.problemId;
+
+                        // TODO change the condition statement
+
+                        var newUser = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
+                        var data = { acid: newDiscussion.problemId};
+                        jQuery
+                        .getJSON(
+                            eBookConfig.ajaxURL + "gethist.json",
+                            data,
+                            function (data, status, whatever) {
+                                if ( data.history.length !== 0 && newDiscussion.user !== newUser){
+                                    var windowPos = document.getElementById("popWindow");
+                                    var integrated = document.createElement('div');
+                                    $(integrated).css("border-bottom", "2px solid black");
+                                    var content = document.createElement('a');
+                                    content.onclick = function () {
+                                        readDiscussionList(currentLength-1);
+                                    };
+                                    content.id = "windowDiv" + currentLength;
+                                    content.href =  newDiscussion.url;
+
+                                    var detail = "<b>" + "Problem:" + newDiscussion.question + "</b>" + "</br>" +
+                                                "Chapter:" + newDiscussion.chapter + "</br>" +
+                                                "Time:" + newDiscussion.time;
+                                    content.innerHTML = detail;
+                                    $(content).css("color", "black");
+                                    $(content).css("font-size", "18px");
+                                    $(content).css("display", "block");
+                                    var countDown = document.createElement('a');
+                                    countDown.innerHTML = "5 seconds";
+                                    countDown.id = "countDown" + currentLength;
+                                    $(countDown).css("display", "block");
+                                    $(countDown).css("color", "black");
+                                    $(countDown).css("font-size", "20px");
+            
+                                    integrated.appendChild(countDown);
+                                    integrated.appendChild(content);
+                                    windowPos.appendChild(integrated);
+                                    $(windowPos).css("display", "");
+                                    // count down the window
+                                    var target = document.getElementById("countDown" + currentLength);
+                                    setTimeout(() => {
+                                        target.innerHTML = "4 seconds"; 
+                                    }, 1000);
+                                    setTimeout(() => {
+                                        target.innerHTML = "3 seconds"; 
+                                    }, 2000);
+                                    setTimeout(() => {
+                                        target.innerHTML = "2 seconds";  
+                                    }, 3000);
+                                    setTimeout(() => {
+                                        target.innerHTML = "1 seconds"; 
+                                    }, 4000);
+                                    setTimeout(() => {
+                                        target.innerHTML = "0 seconds";
+                                        windowPos.removeChild(windowPos.childNodes[1]);
+                                        if (windowPos.childNodes.length == 1){
+                                            windowPos.style.display = "none";
+                                        }
+                                    }, 5000);
+                                }
+
+                            }.bind(this)
+                        )
+
+                    } 
+                }
+            }
+        }
+
+        function readDiscussionList(index) {
+            if (!discussionList.data[index].clicked){
+                discussionList.data[index].clicked = true;
+                discussionList.submitOp([{ p: [index], ld: discussionList.data[index], li:discussionList.data[index]}]);
+                var countCircle = document.getElementById("globalCount");
+                var count = parseInt(countCircle.innerHTML);
+                
+                if (count == 1){
+                    $(countCircle).css("display", "none");
+                    document.getElementById("globalMenu").style.color = "";
+                    countCircle.innerHTML = 0;
+                } else {
+                    if (count > 1){
+                        countCircle.innerHTML = (count-1).toString();
+                    }
+                }
+            }
+        }
+        
+        function showAllDiscussionSession() {
+            $("#questions" + problem_id)
+                .children("div")
+                .remove();
+            if (currentDocForDiscussion.type != null) {
+                let index = 1;
+                currentDocForDiscussion.data.forEach((session) => {
+                    // var userName = session.user;
+                    var question = session.question;
+                    var questId = session.id;
+                    var code = session.code;
+                    var time = session.time;
+                    var quest = document.createElement("div");
+                    quest.onclick = function() { showQuestDetail(questId, code, session.index); };
+                    quest.setAttribute("style", "height:30px; border: solid 2px #dbdbdb; border-style: solid solid none solid; cursor: pointer;");
+                    if (index === currentDocForDiscussion.data.length){
+                        quest.setAttribute("style", "height:30px; border: solid 2px #dbdbdb; cursor: pointer;");
+                    }
+                    $(quest).mousemove(function(){
+                        $(quest).css("background","#eeeeee");
+                    });
+                    $(quest).mouseleave(function(){
+                        $(quest).css("background","ivory");
+                    });
+                    var leftQuest = document.createElement("div");
+                    var rightQuest = document.createElement("div");
+                    $(leftQuest).css("float", "left");
+                    $(leftQuest).css("margin-top", "4px");
+                    $(leftQuest).css("margin-left", "2px");
+                    $(rightQuest).css("float", "right");
+                    $(rightQuest).css("margin-top", "4px");
+                    $(rightQuest).css("margin-right", "2px");
+
+                    var questionIndex = document.createElement("b");
+                    questionIndex.id = "question" + questId;
+                    questionIndex.innerHTML = "Q" + index + ":";
+                    ++index;
+                    leftQuest.appendChild(questionIndex);
+                    var q = document.createTextNode(question);
+                    leftQuest.appendChild(q);
+                    
+                    var t = document.createTextNode(time);
+                    rightQuest.appendChild(t);
+
+                    quest.appendChild(leftQuest);
+                    quest.appendChild(rightQuest);
+
+                    $("#questions" + problem_id).append(quest);
+
+                    var disDiv = document.getElementById("discussionDiv" + problem_id);
+
+                    const detailDiv = document.getElementById("detailDiv" + problem_id + questId);
+
+                    if (!detailDiv) {
+                        const detailDiv = document.createElement("div");
+                        detailDiv.id = "detailDiv" + problem_id + questId;
+                        $(detailDiv).addClass("detailDiv" + problem_id);
+                        $(detailDiv).css("display", "none");
+                        $(detailDiv).css("background", "ivory");
+                        $(detailDiv).css("overflow", "auto");
+                        $(detailDiv).css("height", "325px");
+                        $(detailDiv).css("word-break", "break-all");
+
+                        var problemTitle = document.createElement("div");
+                        problemTitle.setAttribute("style", "border: solid 2px #dbdbdb; height:48px; overflow:auto;");
+
+                        var returnButton = document.createElement("button");
+                        $(returnButton).addClass("ac_opt btn btn-default");
+                        $(returnButton).css("font-size", "10px");
+                        $(returnButton).css("float", "left");
+                        var fig = document.createElement("span");
+                        $(fig).addClass("glyphicon glyphicon-arrow-left");
+                        $(fig).css("aria-hidden", "true");
+                        returnButton.appendChild(fig);
+                        returnButton.onclick = function() { showTitles(problem_id, questId); };
+                        problemTitle.appendChild(returnButton);
+
+                        var titleLeft = document.createElement("div");
+                        var titleRight = document.createElement("div");
+
+                        $(titleLeft).css("float", "left");
+                        $(titleLeft).css("margin-top", "10px");
+                        $(titleRight).css("float", "right");
+                        $(titleRight).css("margin-top", "10px");
+                        $(titleRight).css("margin-right", "5px");
+        
+                        var titleIndex = document.createElement("b");
+                        titleIndex.innerHTML = "Q" + (index-1) + ":";
+                        titleLeft.appendChild(titleIndex);
+                        var titleQ = document.createTextNode(question);
+                        titleLeft.appendChild(titleQ);
+                        
+                        var titleT = document.createTextNode(time);
+                        titleRight.appendChild(titleT);
+
+                        problemTitle.appendChild(titleLeft);
+                        problemTitle.appendChild(titleRight);
+
+                        detailDiv.appendChild(problemTitle);
+                        disDiv.appendChild(detailDiv);
+                    }
+
+                    const detailsDiv = document.getElementById("detailDiv" + problem_id + questId);
+                    var num = detailsDiv.childNodes.length;
+                    for (var i = num-1; i >= 1; --i){
+                        detailsDiv.removeChild(detailsDiv.childNodes[i]);
+                    }
+                    // $(detailsDiv)
+                    //    .children("div")
+                    //    .remove();
+                    
+                    if(session.chat.length != 0) {
+                        let count = 0;
+                        session.chat.forEach((ans) => {
+                            ++count;
+                            var responseDiv = document.createElement("div");
+                                                    
+                            responseDiv.setAttribute("style",
+                                "padding: 5px; text-align: left; \
+                                border-left: solid 2px #dbdbdb; border-right: solid 2px #dbdbdb; ");
+
+                            $(responseDiv).mousemove(function(){
+                                $(responseDiv).css("background-color","#eeeeee");
+                            });
+
+                            $(responseDiv).mouseleave(function(){
+                                $(responseDiv).css("background-color","ivory");
+                            });
+                            $(responseDiv).css("border-left","solid 2px #dbdbdb");
+                            $(responseDiv).css("border-right","solid 2px #dbdbdb");
+
+
+                            var answer = ans.answer;
+                            var index = 0;
+                            if(ans.index == 0 || session.chat[ans.index].user != session.chat[ans.index - 1].user) {
+                                var user = document.createElement("div");
+                                $(user).text(ans.user);
+                                user.setAttribute(
+                                    "style",
+                                    "font-size: 11px; font-weight: bold; margin-left: 28px;"
+                                );
+                                responseDiv.appendChild(user);
+                                $(responseDiv).css("border-top","solid 2px #dbdbdb");
+                            }
+
+                            // console.log(ans.pointers);
+                            if (ans.pointers != null) {
+
+                                // may need debug 
+                                // not test
+                                ans.pointers.forEach((pointer) => {
+                                    var text = answer.substring(index, pointer.answerStart.ch);
+                                    if (ans.code != null){
+                                        var textSpan = document.createElement("span");
+                                    } else {
+                                        var textSpan = document.createElement("div");
+                                    }
+                                    textSpan.innerText = text;
+                                    responseDiv.appendChild(textSpan);
+                                    var aText = answer.substring(pointer.answerStart.ch, pointer.answerEnd.ch);
+                                    var aPointer = document.createElement("a");
+                                    aPointer.innerText = aText;
+                                    aPointer.href = "javascript:void(0);";
+                                    aPointer.onclick = function () {                 
+                                        highlightCodeSelected(session.index, ans.index, pointer.codeStart.line, pointer.codeStart.ch, pointer.codeEnd.line, pointer.codeEnd.ch, edmode);
+                                    };
+                                    responseDiv.appendChild(aPointer);
+                                    index = pointer.answerEnd.ch;
+                                })
+                            }
+
+                            if (index < answer.length) {
+                                var text = answer.substring(index, answer.length);
+                                var textSpan = document.createElement("span");
+                                textSpan.innerText = text;
+                               // if (ans.code == null || ans.index == 0){
+                                    $(textSpan).css("margin-left", "28px");
+                               // }
+                                responseDiv.appendChild(textSpan);
+
+                                var textTime = document.createElement("span");
+                                textTime.innerText = ans.time;
+                                $(textTime).css("float", "right");
+
+                                responseDiv.appendChild(textTime);
+                            }
+
+                            if (ans.code != null) {
+                                if (ans.index != 0){
+
+                                    var notice = document.createElement("div");
+                                    notice.setAttribute(
+                                        "style",
+                                        "text-align:center;color:grey;cursor:pointer;"
+                                    );
+                                    $(notice).text("Code edited (Click to show the difference)");
+                                    notice.onclick = function () {                 
+                                        showAnswerCode(session.index, questId, ans.index);
+                                    };
+                                    responseDiv.appendChild(notice);
+
+                                    var diffDiv = document.createElement("div");
+                                    diffDiv.id = "diff" + problem_id + session.index + questId + ans.index;
+                                    $(diffDiv).addClass("col-md-12");
+                                    $(diffDiv).css("background", "#ffffff");
+                                    $(diffDiv).css("border", "solid 2px #dbdbdb");
+                                    $(diffDiv).css("max-height", "300px");
+                                    $(diffDiv).css("overflow", "auto");
+                                    $(diffDiv).css("float", "none");
+                                    $(diffDiv).css("display", "none");
+  
+
+                                    // const showCodeButton = document.createElement("button");
+                                    // // $(showCodeButton).css("float", "right");
+                                    // $(showCodeButton).text("C");
+                                    // showCodeButton.title = "Show Code";
+                                    // showCodeButton.setAttribute(
+                                    //     "style",
+                                    //     "width: 28px; height: 28px; border-radius: 50%; border: solid 1px black;"
+                                    // );
+            
+                                    // showCodeButton.id = "showCodeButton" + questId + ans.index;
+                                    // showCodeButton.onclick = function () {                 
+                                    //     showAnswerCode(session.index, questId, ans.index);
+                                    // };
+                                    responseDiv.appendChild(diffDiv);
+                                }
+                            }
+
+                            
+                            if (count == session.chat.length){
+                                // the last element
+                                $(responseDiv).css("border-bottom","solid 2px #dbdbdb");
+                            }
+
+                            detailsDiv.appendChild(responseDiv);
+                        })
+                        ;
+                    }
+                    // scroll the div into the bottom
+                    var objDiv = document.getElementById("detailDiv" + problem_id + questId);
+                    $(objDiv).scrollTop(objDiv.scrollHeight);
+                });
+            }
+        }
+
+        function showTitles() {
+            const currentCodeDoc = connection_codecontent.get(problem_id + newUser, "mycode");
+
+            var detailDivs = document.getElementsByClassName("detailDiv" + problem_id);
+            var i;
+            for (i = 0; i < detailDivs.length; i++) {
+                detailDivs[i].style.display = 'none';
+            }
+            var answerDivs = document.getElementsByClassName("answerDiv" + problem_id);
+            for (i = 0; i < answerDivs.length; i++) {
+                answerDivs[i].style.display = 'none';
+            }
+            document.getElementById("questions" + problem_id).style.display = 'block';
+            document.getElementById("inputDiv" + problem_id).style.display = 'none';
+            document.getElementById("answerLinkButton" + problem_id).style.display = 'none';
+            document.getElementById("answerSubmitButton" + problem_id).style.display = 'none';
+            document.getElementById("submitButton" + problem_id).style.display = 'block';
+            document.getElementById("cancelHighLightButton" + problem_id).style.display = 'none';
+            document.getElementById("inputDiv" + problem_id).style.display = 'block';
+            // document.getElementById("diffDiv" + problem_id).style.display = 'none';
+            document.getElementById("liveCodeButton" + problem_id).style.display = 'none';
+
+            var codeEditorWindow = $("div#" + problem_id + " > .ac_code_div");
+
+            if (codeEditorWindow.hasClass("col-md-10")) {
+                codeEditorWindow.addClass("col-md-6").removeClass("col-md-10");
+            }
+            helpSession.destroy();
+            currentCodeDoc.fetch(function (err) {
+                if (err) throw err;
+                if (currentCodeDoc.type === null) {
+                    currentCodeDoc.create(
+                        {
+                            code: editor.getValue(),
+                        },
+                        acallback
+                    );
+                    return;
+                }
+                acallback();
+            });
+        }
+        $(myCode).click(showTitles);
+
+        function showQuestDetail(questId, questCode, questIndex) {
+            currentQuest = questId;
+            currentCode = questCode;
+            currentQuestIndex = questIndex;
+            document.getElementById("questions" + problem_id).style.display = 'none';
+            document.getElementById("inputDiv" + problem_id).style.display = 'block';
+            document.getElementById("answerLinkButton" + problem_id).style.display = 'block';
+            document.getElementById("answerSubmitButton" + problem_id).style.display = 'block';
+            document.getElementById("submitButton" + problem_id).style.display = 'none';
+            document.getElementById("detailDiv" + problem_id + currentQuest).style.display = 'block';
+
+            const DisSessionDoc = connection_codecontent.get(
+                problem_id,
+                "disSession" + currentQuest
+            );
+            
+            thisCodeProblem.destroy();
+
+            DisSessionDoc.fetch(function (err) {
+                if (err) throw err;
+                if (DisSessionDoc.type === null) {
+                    DisSessionDoc.create(
+                        {
+                            code: currentCode,
+                        },
+                        acallback
+                    );
+                    return;
+                }
+                acallback();
+            });
+
+            function acallback() {
+                helpSession = new ShareDBCodeMirrorBinding(editor, DisSessionDoc);
+            }
+        }
+
+
+        function addNewDiscussionSessAns(problem_id) {
+            if (document.getElementById("submitButton" + problem_id).style.display != 'none'){
+                addNewDiscussionSession(problem_id);
+            } else {
+                addNewDiscussionAnswer();
+            }
+        }
+
+        function addNewDiscussionSession(problem_id) {
+            var listIndex = document.getElementById("questions" + problem_id).childNodes.length;
+            if(inputCodeMirror.getValue() != "") {
+                currentDocForDiscussion.fetch(function (err) {
+                    if (err) throw err;
+                    if (currentDocForDiscussion.type === null) {
+                        currentDocForDiscussion.create([]);
+                    }
+                    if (discussionList.type === null) {
+                        discussionList.create([]);
+                    }
+                    var dataLength = currentDocForDiscussion.data.length;
+                    var newData = {
+                        index: dataLength,
+                        user: newUser,
+                        question: inputCodeMirror.getValue(),
+                        chat: [],
+                        code: editor.getValue(),
+                        id: String(new Date().getTime()),
+                        time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
+                    };
+
+                    currentDocForDiscussion.submitOp([{ p: [dataLength], li: newData }]);
+
+                    var listLength = discussionList.data.length;
+                    //console.log(discussionList.data);
+                    //console.log("debug");
+                    var curUser = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
+                    // add the question to the global menu
+                    var newList = {
+                        index: listLength,
+                        question: inputCodeMirror.getValue(),
+                        chapter: document.title.split("—")[0],
+                        listIndex: listIndex+1,
+                        time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
+                        clicked: false,
+                        id: String(new Date().getTime()),
+                        url: currentUrl + "#" + problem_id,
+                        user: curUser,
+                        problemId: problem_id,
+                    };
+                    discussionList.submitOp([{p: [listLength], li: newList}]);
+
+                    inputCodeMirror.getDoc().setValue("");
+                    inputCodeMirror.toTextArea();
+                    var newInputCodeMirror = CodeMirror.fromTextArea(document.getElementById("inputTextArea" + problem_id), {
+                        lineWrapping: true,
+                        styleSelectedText: true,
+                        mode: edmode,
+                        indentUnit: 4,
+                        matchBrackets: true,
+                        autoMatchParens: true,
+                        extraKeys: { Tab: "indentMore", 
+                                    "Shift-Tab": "indentLess", 
+                                    "Enter": function () 
+                                            {                 
+                                                addNewDiscussionSessAns(problem_id);
+                                            }
+                                    },
+                    });
+                    newInputCodeMirror.setSize(600, 65);
+                    inputCodeMirror = newInputCodeMirror;
+                });
+
+            }
+        }
+
+        function addNewDiscussionAnswer() {
+            var answerIndex = currentDocForDiscussion.data[currentQuestIndex].chat.length;
+            var answerValue = inputCodeMirror.getValue();
+            if (answerValue != "") {
+                var answerCode = editor.getValue();
+                var latestNewCode = answerIndex;
+                if (answerIndex != 0 && answerCode == currentDocForDiscussion.data[currentQuestIndex].chat[currentDocForDiscussion.data[currentQuestIndex].chat[answerIndex - 1].latestNewCodeIndex].code) {
+                    answerCode = null;
+                    latestNewCode = currentDocForDiscussion.data[currentQuestIndex].chat[answerIndex - 1].latestNewCodeIndex;
+                }
+                var newData = {
+                    index: answerIndex,
+                    user: newUser,
+                    code: answerCode,
+                    answer: answerValue,
+                    pointers: codePointer,
+                    latestNewCodeIndex: latestNewCode,
+                    id: String(new Date().getTime()),
+                    time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'}))
+                };
+                currentDocForDiscussion.data[currentQuestIndex].chat.push(newData);
+                currentDocForDiscussion.submitOp([{ p: [currentQuestIndex],
+                    ld: currentDocForDiscussion.data[currentQuestIndex],
+                    li: currentDocForDiscussion.data[currentQuestIndex]}]);
+                inputCodeMirror.getDoc().setValue("");
+                inputCodeMirror.toTextArea();
+                var newInputCodeMirror = CodeMirror.fromTextArea(document.getElementById("inputTextArea" + problem_id), {
+                    lineWrapping: true,
+                    styleSelectedText: true,
+                    mode: edmode,
+                    indentUnit: 4,
+                    matchBrackets: true,
+                    autoMatchParens: true,
+                    extraKeys: { Tab: "indentMore", 
+                                "Shift-Tab": "indentLess", 
+                                "Enter": function () 
+                                        {                 
+                                            addNewDiscussionSessAns(problem_id);
+                                        }
+                                },
+                });
+                newInputCodeMirror.setSize(600, 65);
+                inputCodeMirror = newInputCodeMirror;
+                codePointer.length = 0;
+            } 
+        }
+
+        function showAnswerCode(questIndex, questId, answerIndex) {
+            var displayDiv = document.getElementById("diff" + problem_id + questIndex + questId + answerIndex );
+            if (displayDiv.style.display == ""){
+                displayDiv.style.display = "none";
+                return;
+            }
+            var currentChat = currentDocForDiscussion.data[questIndex].chat[answerIndex];
+            var curDate = getDate(new Date(parseInt(currentChat.id)));
+            var curCode = currentChat.code;
+
+            if(answerIndex != 0) {
+                var prevChat = currentDocForDiscussion.data[questIndex].chat[currentDocForDiscussion.data[questIndex].chat[answerIndex - 1].latestNewCodeIndex];
+                var prevDate = getDate(new Date(parseInt(prevChat.id)));
+                var prevCode = prevChat.code;
+            } else {
+                var prevDate = curDate;
+                var prevCode = curCode;
+            }
+            var diff = difflib.unifiedDiff(prevCode.split('\n'), curCode.split('\n'), 
+            {fromfile: 'Previous', tofile: 'Current',fromfiledate: prevDate, tofiledate: curDate,lineterm: ''});
+
+
+            var Textdiff = "";
+            for(var i = 0; i < diff.length; i++) {
+                Textdiff = Textdiff + diff[i] + "\n";
+            }
+
+            var diffHtml = Diff2Html.html(Textdiff, {
+                drawFileList: true,
+                matching: 'lines',
+                drawFileList: false,
+                outputFormat: 'line-by-line',
+            });
+            displayDiv.innerHTML = diffHtml;
+
+            document.getElementById("liveCodeButton" + problem_id).style.display = 'block';
+            displayDiv.style.display = "";
+
+            
+            // helpSession.destroy();
+            // editor.getDoc().setValue(curCode);
+            // editor.toTextArea();
+            // var newEditor = CodeMirror.fromTextArea(document.getElementById("codeTextArea" + problem_id), {
+            //     lineNumbers: true,
+            //     styleSelectedText: true,
+            //     mode: edmode,
+            //     indentUnit: 4,
+            //     matchBrackets: true,
+            //     autoMatchParens: true,
+            //     readOnly: true,
+            //     extraKeys: { Tab: "indentMore", "Shift-Tab": "indentLess" },
+            // });
+            // editor = newEditor;
+        }
+
+        function getDate(d) {
+            var formattedDate =  (d.getMonth() + 1) + "/" + d.getDate() + "/" + d.getFullYear();
+            var hours = (d.getHours() < 10) ? "0" + d.getHours() : d.getHours();
+            var minutes = (d.getMinutes() < 10) ? "0" + d.getMinutes() : d.getMinutes();
+            var formattedTime = hours + ":" + minutes;
+            return(formattedDate + " " + formattedTime);
+        }
+
+        function addNewCodeLink() {
+            var pos = document.getElementById("navbar");
+            var popWindow = document.createElement('div');
+            $(popWindow).css("position", "fixed");
+            $(popWindow).css("right", "20px");
+            $(popWindow).css("bottom", "20px");
+            $(popWindow).css("background-color", "#CCFFFF");
+            $(popWindow).css("z-index", "99999");
+            $(popWindow).css("font-size", "18px");
+            
+            if ($("#answerLinkButton" + problem_id)[0].innerHTML == "Link") {
+                var codeSelectStart = editor.getCursor(true);
+                var codeSelectEnd = editor.getCursor(false);
+                if (answerInputSelectStart != null && answerInputSelectEnd != null && codeSelectStart != codeSelectEnd) {
+                    if(answerInputSelectEnd.line == answerInputSelectStart.line && answerInputSelectEnd.ch == answerInputSelectStart.ch) {
+                        answerInputSelectStart.line = 0;
+                        answerInputSelectStart.ch = 0;
+                    }
+
+                    var dataLength = codePointer.length;
+                    var newData = {
+                        index: dataLength,
+                        user: newUser,
+                        id: String(new Date().getTime()),
+                        codeStart: codeSelectStart,
+                        codeEnd: codeSelectEnd,
+                        answerStart: answerInputSelectStart,
+                        answerEnd: answerInputSelectEnd
+                    };
+                    codePointer.push(newData);
+                    answerInputSelectStart = 0;
+                    answerInputSelectEnd = 0;
+                    $("#answerLinkButton" + problem_id).addClass("glyphicon glyphicon-paperclip");
+                    $("#answerLinkButton" + problem_id)[0].innerHTML = "";
+                    popWindow.innerHTML = "Link successfully.";
+                    pos.insertBefore(popWindow, pos.childNodes[0]);
+                    setTimeout(() => {
+                        pos.removeChild(pos.childNodes[0]);
+                    }, 5000);
+                }
+            }
+            else {
+                var inputSelectStart = inputCodeMirror.getCursor(true);
+                var inputSelectEnd = inputCodeMirror.getCursor(false);
+                answerInputSelectStart = inputSelectStart;
+                answerInputSelectEnd = inputSelectEnd;
+                popWindow.innerHTML = "Please select code in editor and then link them.";
+                pos.insertBefore(popWindow, pos.childNodes[0]);
+                setTimeout(() => {
+                    pos.removeChild(pos.childNodes[0]);
+                }, 5000);
+                $("#answerLinkButton" + problem_id).removeClass("glyphicon glyphicon-paperclip");
+                $("#answerLinkButton" + problem_id)[0].innerHTML = "Link";
+            }
+        }
+
+        function highlightCodeSelected(questIndex, answerIndex, startLine, startCh, endLine, endCh, edmode) {
+            // document.getElementById("diffDiv" + problem_id).style.display = "none";
+            document.getElementById("liveCodeButton" + problem_id).style.display = 'block';
+            helpSession.destroy();
+            editor.getDoc().setValue(currentDocForDiscussion.data[questIndex].chat[answerIndex].code);
+            editor.toTextArea();
+            var newEditor = CodeMirror.fromTextArea(document.getElementById("codeTextArea" + problem_id), {
+                lineNumbers: true,
+                styleSelectedText: true,
+                mode: edmode,
+                indentUnit: 4,
+                matchBrackets: true,
+                autoMatchParens: true,
+                readOnly: true,
+                extraKeys: { Tab: "indentMore", "Shift-Tab": "indentLess" },
+            });
+            newEditor.getDoc().markText({line: startLine, ch: startCh}, {line: endLine, ch: endCh}, {css: "background: yellow"});
+            editor = newEditor;
+        }
+
+        $(helpButton).click(showNewHelpSubmit);
+        $(cancelButton).click(cancelHelpSession);
+        $(cancelHighLightButton).click(cancelHighLight);
+        $(liveCodeButton).click(returnLiveCode);
+
+        function showNewHelpSubmit() {
+            document.getElementById("cancelButton" + problem_id).style.display = 'block';
+            document.getElementById("inputDiv" + problem_id).style.display = 'inline-block';
+            document.getElementById("answerLinkButton" + problem_id).style.display = 'none';
+            document.getElementById("answerSubmitButton" + problem_id).style.display = 'none';
+            document.getElementById("submitButton" + problem_id).style.display = 'inline-block';
+            document.getElementById("discussionDiv" + problem_id).style.height = '420px';
+            document.getElementById("discussionDiv" + problem_id).style.display = '';
+        }
+
+        function cancelHelpSession() {
+            if (document.getElementById("answerSubmitButton" + problem_id).style.display != 'none'){
+                showTitles();
+                //console.log("back");
+            }
+            /*
+            currentDocForHelpSession.fetch(function (err) {
+                if (err) throw err;
+                var dataLength = currentDocForHelpSession.data.length;
+                currentDocForHelpSession.submitOp([{ p: [dataLength -  1], ld: currentDocForHelpSession.data[dataLength - 1] }]);
+            });
+            inputCodeMirror.getDoc().setValue("");
+            inputCodeMirror.toTextArea();
+            var newInputCodeMirror = CodeMirror.fromTextArea(document.getElementById("inputTextArea" + problem_id), {
+                lineWrapping: true,
+                styleSelectedText: true,
+                mode: edmode,
+                indentUnit: 4,
+                matchBrackets: true,
+                autoMatchParens: true,
+                extraKeys: { Tab: "indentMore", 
+                            "Shift-Tab": "indentLess", 
+                            "Enter": function () 
+                                    {                 
+                                        addNewDiscussionSessAns(problem_id);
+                                    }
+                            },
+            });
+            newInputCodeMirror.setSize(600, 65);
+            inputCodeMirror = newInputCodeMirror;
+            */
+
+            document.getElementById("cancelButton" + problem_id).style.display = 'none';
+            document.getElementById("inputDiv" + problem_id).style.display = 'none';
+            document.getElementById("discussionDiv" + problem_id).style.display = 'none';
+        }
+
+        function cancelHighLight() {
+            editor.toTextArea();
+            var newEditor = CodeMirror.fromTextArea(document.getElementById("codeTextArea" + problem_id), {
+                lineNumbers: true,
+                styleSelectedText: true,
+                mode: edmode,
+                indentUnit: 4,
+                matchBrackets: true,
+                autoMatchParens: true,
+                readOnly: true,
+                extraKeys: { Tab: "indentMore", "Shift-Tab": "indentLess" },
+            });
+            editor = newEditor;
+            document.getElementById("cancelHighLightButton" + problem_id).style.display = 'none';
+            document.getElementById("liveCodeButton" + problem_id).style.display = 'block';
+        }
+
+        function returnLiveCode() {
+            // document.getElementById("diffDiv" + problem_id).style.display = "none";
+            document.getElementById("liveCodeButton" + problem_id).style.display = 'none';
+
+            const DisSessionDoc = connection_codecontent.get(
+                problem_id,
+                "disSession" + currentQuest
+            );
+            
+            DisSessionDoc.fetch(function (err) {
+                if (err) throw err;
+                if (DisSessionDoc.type === null) {
+                    DisSessionDoc.create(
+                        {
+                            code: currentCode,
+                        },
+                        acallback
+                    );
+                    return;
+                }
+                acallback();
+            });
+
+            function acallback() {
+                editor.getDoc().setValue(DisSessionDoc.data.code);
+                editor.toTextArea();
+                var newEditor = CodeMirror.fromTextArea(document.getElementById("codeTextArea" + problem_id), {
+                    lineNumbers: true,
+                    styleSelectedText: true,
+                    mode: edmode,
+                    indentUnit: 4,
+                    matchBrackets: true,
+                    autoMatchParens: true,
+                    extraKeys: { Tab: "indentMore", "Shift-Tab": "indentLess" },
+                });
+                editor = newEditor;
+                helpSession = new ShareDBCodeMirrorBinding(editor, DisSessionDoc);
+            }
+        }
+
         if (this.enablePartner) {
             var checkPartner = document.createElement("input");
             checkPartner.type = "checkbox";
@@ -482,6 +1963,7 @@ export class ActiveCode extends RunestoneBase {
         $(this.outerDiv).prepend(ctrlDiv);
         this.controlDiv = ctrlDiv;
     }
+    
     enableSaveLoad() {
         $(this.runButton).text($.i18n("msg_activecode_save_run"));
     }

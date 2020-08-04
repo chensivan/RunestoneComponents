@@ -194,6 +194,11 @@ script_files = [
     "https://cdn.jsdelivr.net/npm/vega@4.0.0-rc.2/build/vega.js",
     "https://cdn.jsdelivr.net/npm/vega-lite@2.5.0/build/vega-lite.js",
     "https://cdn.jsdelivr.net/npm/vega-embed@3.14.0/build/vega-embed.js",
+    "difflib-browser.js",
+    "diff.js",
+    "diff2html.js",
+    "sharedb.js",
+    "codemirror.js",
     "runestone.js",
     "jquery-ui-1.10.3.custom.min.js",
     "bootstrap-3.4.1/js/bootstrap.min.js",
@@ -205,6 +210,9 @@ script_files = [
 ]
 
 css_files = [
+    "diff.css",
+    "diff2html.css",
+    "codemirror.css",
     "bootstrap-3.4.1/css/bootstrap.min.css",
     "presenter_mode.css",
     "jquery-ui-1.10.3.custom.min.css",
