@@ -1127,8 +1127,14 @@ export class ActiveCode extends RunestoneBase {
                     const search = document.getElementById("discussionList" + session.id);
                     if (!search) {
                         var contentA = document.createElement("a");
-                        contentA.href = session.url;
-                        $(contentA).css("text-decoration",  "none");
+
+                        contentA.onclick = function () {
+                            var str = session.url;
+                            var old = str.split("#")[0];
+                            var hash = str.split("#")[1];
+                            window.open(old + "?arg="  + session.index + "#" + hash);
+                        }
+                          
                         var content = document.createElement("div");
                         // outer div
                         content.id = "discussionList" + session.id;
@@ -1312,7 +1318,7 @@ export class ActiveCode extends RunestoneBase {
                     var code = session.code;
                     var time = session.time;
                     var quest = document.createElement("div");
-                    quest.onclick = function() { showQuestDetail(questId, code, session.index); };
+                    quest.onclick = function() { showQuestDetail(questId, code, session.index, problem_id); };
                     quest.setAttribute("style", "height:30px; border: solid 2px #dbdbdb; border-style: solid solid none solid; cursor: pointer;");
                     if (index === currentDocForDiscussion.data.length){
                         quest.setAttribute("style", "height:30px; border: solid 2px #dbdbdb; cursor: pointer;");
@@ -1608,6 +1614,19 @@ export class ActiveCode extends RunestoneBase {
                     $(objDiv).scrollTop(objDiv.scrollHeight);
                 });
             }
+            
+            var str = window.location.href;
+            var pro = "";
+            if (str.hash != ""){
+              var pro = str.split("#")[1];
+            }
+            // jump directly into the thread
+            if (pro === problem_id){
+              showQuestionList();
+              var index = (str.split("#")[0]).split("=")[1];
+              var dis = discussionList.data[index];
+              showQuestDetail(dis.id,dis.code,dis.newindex,pro);
+            }
         }
 
         /**
@@ -1716,7 +1735,7 @@ export class ActiveCode extends RunestoneBase {
         /**
          * Display the chat session for one discussion.
          */
-        function showQuestDetail(questId, questCode, questIndex) {
+        function showQuestDetail(questId, questCode, questIndex, problem_id) {
             currentQuest = questId;
             currentCode = questCode;
             currentQuestIndex = questIndex;
@@ -1816,7 +1835,7 @@ export class ActiveCode extends RunestoneBase {
                   };
                   $.ajax({
                     type: 'POST',
-                    url: "https://hooks.slack.com/services/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",
+                    url: "",
                     data: JSON.stringify(slackBody),
                     dataType: "json",
                     error: function(e) {
@@ -1850,11 +1869,11 @@ export class ActiveCode extends RunestoneBase {
                   discussionList.submitOp([{p: [listLength], li: newList}]);
                   $("textarea#questInput" + problem_id).val("");
                   $('#questModal' + problem_id).modal('toggle');
-                  showQuestDetailCallback(newData.id, newData.code, newData.index);
+                  showQuestDetailCallback(newData.id, newData.code, newData.index, problem_id);
                   
               });
-              function showQuestDetailCallback(questId, questCode, questIndex) {
-                showQuestDetail(questId, questCode, questIndex);
+              function showQuestDetailCallback(questId, questCode, questIndex, problem_id) {
+                showQuestDetail(questId, questCode, questIndex, problem_id);
               }
           }
         }
