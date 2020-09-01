@@ -1633,13 +1633,48 @@ export class ActiveCode extends RunestoneBase {
          * Change the resolved status of each discussion.
          */
         function changeResolve(questIndex, ListIndex, userID) {
+          var inputquestion = currentDocForDiscussion.data[questIndex].question;
+          var code = currentDocForDiscussion.data[questIndex].code;
+          var slackurl = '<' + currentUrl + "#" + problem_id + '|' + inputquestion + '>';
           if (userID == eBookConfig.username){
             if (currentDocForDiscussion.data[questIndex].resolved){
-             currentDocForDiscussion.data[questIndex].resolved = false;
-             discussionList.data[ListIndex].resolved = false;
+              currentDocForDiscussion.data[questIndex].resolved = false;
+              discussionList.data[ListIndex].resolved = false;
+              const slackBody = {
+                text: '<!channel>(Unresolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + code,
+                channel: 'C019TEX7KFV',
+                ts: currentDocForDiscussion.data[questIndex].ts,
+                token: 'xoxb-1345920338561-1339533625732-BlJaUJqtE9IUoJMJIkcVkenI'
+              };
+             $.ajax({
+              type: 'POST',
+              url: "https://slack.com/api/chat.update",
+              data: slackBody,
+              dataType: "text",
+              error: function(e) {
+                console.log(e);
+              },
+              success: function (msg) {console.log("success!");}
+            });
             } else {
-             currentDocForDiscussion.data[questIndex].resolved = true;
-             discussionList.data[ListIndex].resolved = true;
+              currentDocForDiscussion.data[questIndex].resolved = true;
+              discussionList.data[ListIndex].resolved = true;
+              const slackBody = {
+                text: '<!channel>(Resolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + code,
+                channel: 'C019TEX7KFV',
+                ts: currentDocForDiscussion.data[questIndex].ts,
+                token: 'xoxb-1345920338561-1339533625732-BlJaUJqtE9IUoJMJIkcVkenI'
+              };
+              $.ajax({
+                type: 'POST',
+                url: "https://slack.com/api/chat.update",
+                data: slackBody,
+                dataType: "text",
+                error: function(e) {
+                  console.log(e);
+                },
+                success: function (msg) {console.log("success!");}
+              });
             }
              currentDocForDiscussion.submitOp([{ p: [questIndex], ld: currentDocForDiscussion.data[questIndex], li:currentDocForDiscussion.data[questIndex]}]);
              discussionList.submitOp([{ p: [ListIndex], ld: discussionList.data[ListIndex], li:discussionList.data[ListIndex]}]);
@@ -1809,68 +1844,63 @@ export class ActiveCode extends RunestoneBase {
                   var time = String(new Date().getTime());
                   var dataLength = currentDocForDiscussion.data.length;
                   var listLength = discussionList.data.length;
-                  var newData = {
-                      index: dataLength,
-                      indexList: listLength,
-                      user: eBookConfig.username,
-                      question: inputquestion,
-                      chat: [],
-                      code: editor.getValue(),
-                      id: time,
-                      time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
-                      resolved: false,
-                  };
 
                   // TODO: slack
-                  /*
                   var slackurl = '<' + currentUrl + "#" + problem_id + '|' + inputquestion + '>';
                   const slackBody = {
-                    text: '<!channel>New question: ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "",
-                        "attachments": [
-                          {
-                              "color": "#f2c744",
-                              "text": editor.getValue(),
-                          }
-                      ]
+                    text: '<!channel>(Unresolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + editor.getValue(),
+                    channel: 'C019TEX7KFV',
+                    token: 'xoxb-1345920338561-1339533625732-BlJaUJqtE9IUoJMJIkcVkenI'
                   };
+
+                  var mts = "";
                   $.ajax({
                     type: 'POST',
-                    url: "",
-                    data: JSON.stringify(slackBody),
-                    dataType: "json",
+                    url: "https://slack.com/api/chat.postMessage",
+                    data: slackBody,
+                    dataType: "text",
                     error: function(e) {
                       console.log(e);
                     },
-                      success: function (msg) {
-                        console.log(msg);
+                    success: function (msg) {
+                      var obj = JSON.parse(msg)
+                      mts = obj.ts;
+                      var newData = {
+                        index: dataLength,
+                        indexList: listLength,
+                        user: eBookConfig.username,
+                        question: inputquestion,
+                        chat: [],
+                        code: editor.getValue(),
+                        id: time,
+                        time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
+                        resolved: false, 
+                        ts: mts,
+                      };
+                      var curUser = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
+                      // add the question to the global menu
+                      var newList = {
+                        index: listLength,
+                        question: inputquestion,
+                        chapter: document.title.split("—")[0],
+                        listIndex: listIndex+1,
+                        time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
+                        clicked: false,
+                        code: editor.getValue(),
+                        newindex: dataLength,
+                        id: time,
+                        url: currentUrl + "#" + problem_id,
+                        user: curUser,
+                        problemId: problem_id,
+                        resolved: false,
+                      };
+                      currentDocForDiscussion.submitOp([{ p: [dataLength], li: newData }]);
+                      discussionList.submitOp([{p: [listLength], li: newList}]);
+                      $("textarea#questInput" + problem_id).val("");
+                      $('#questModal' + problem_id).modal('toggle');
+                      showQuestDetailCallback(newData.id, newData.code, newData.index, problem_id);
                     }
                   });
-                  */
-
-                  var curUser = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
-                  // add the question to the global menu
-                  var newList = {
-                      index: listLength,
-                      question: inputquestion,
-                      chapter: document.title.split("—")[0],
-                      listIndex: listIndex+1,
-                      time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
-                      clicked: false,
-                      code: editor.getValue(),
-                      newindex: dataLength,
-                      id: time,
-                      url: currentUrl + "#" + problem_id,
-                      user: curUser,
-                      problemId: problem_id,
-                      resolved: false,
-                  };
-
-                  currentDocForDiscussion.submitOp([{ p: [dataLength], li: newData }]);
-                  discussionList.submitOp([{p: [listLength], li: newList}]);
-                  $("textarea#questInput" + problem_id).val("");
-                  $('#questModal' + problem_id).modal('toggle');
-                  showQuestDetailCallback(newData.id, newData.code, newData.index, problem_id);
-                  
               });
               function showQuestDetailCallback(questId, questCode, questIndex, problem_id) {
                 showQuestDetail(questId, questCode, questIndex, problem_id);
