@@ -940,6 +940,7 @@ export class ActiveCode extends RunestoneBase {
 
         inputCodeMirror.setSize(600, 65);
         var disSession = connection_mini.get(problem_id, "helpSession");
+        console.log(problem_id);
         var currentDocForDiscussion = disSession;
         currentDocForDiscussion.fetch(function(err) {
             if(err) throw err;
@@ -1644,7 +1645,7 @@ export class ActiveCode extends RunestoneBase {
                 text: '<!channel>(Unresolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + code,
                 channel: 'C019TEX7KFV',
                 ts: currentDocForDiscussion.data[questIndex].ts,
-                token: 'xoxb-1345920338561-1339533625732-BlJaUJqtE9IUoJMJIkcVkenI'
+                token: 'xoxb-1345920338561-1339533625732-OAqNgmobx8Soj60kMCt5iFma'
               };
              $.ajax({
               type: 'POST',
@@ -1663,7 +1664,7 @@ export class ActiveCode extends RunestoneBase {
                 text: '<!channel>(Resolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + code,
                 channel: 'C019TEX7KFV',
                 ts: currentDocForDiscussion.data[questIndex].ts,
-                token: 'xoxb-1345920338561-1339533625732-BlJaUJqtE9IUoJMJIkcVkenI'
+                token: 'xoxb-1345920338561-1339533625732-OAqNgmobx8Soj60kMCt5iFma'
               };
               $.ajax({
                 type: 'POST',
@@ -1850,7 +1851,7 @@ export class ActiveCode extends RunestoneBase {
                   const slackBody = {
                     text: '<!channel>(Unresolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + editor.getValue(),
                     channel: 'C019TEX7KFV',
-                    token: 'xoxb-1345920338561-1339533625732-BlJaUJqtE9IUoJMJIkcVkenI'
+                    token: 'xoxb-1345920338561-1342523238182-MrHaUJ6zadxh6i5qo6kfS7JV'
                   };
 
                   var mts = "";
@@ -2121,7 +2122,9 @@ export class ActiveCode extends RunestoneBase {
          * Display the discussion session for one question.
          * Used for "Show Question" and "Hide Question" button.
          */
+        var testDoc = connection_mini.get("ac2_5_1", "helpSession");
         function showQuestionList() {
+          console.log(testDoc.data);
           if ($("#showQuestButton" + problem_id)[0].innerHTML == "Show Question") {
             showTitles();
             document.getElementById("codeHightlight" + problem_id).style.display = 'none';
@@ -3079,6 +3082,7 @@ export class ActiveCode extends RunestoneBase {
         }
     }
 }
+
 
 var languageExtensions = {
     python: "py",
