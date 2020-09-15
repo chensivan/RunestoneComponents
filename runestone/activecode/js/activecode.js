@@ -940,7 +940,6 @@ export class ActiveCode extends RunestoneBase {
 
         inputCodeMirror.setSize(600, 65);
         var disSession = connection_mini.get(problem_id, "helpSession");
-        console.log(problem_id);
         var currentDocForDiscussion = disSession;
         currentDocForDiscussion.fetch(function(err) {
             if(err) throw err;
@@ -1848,10 +1847,12 @@ export class ActiveCode extends RunestoneBase {
 
                   // TODO: slack
                   var slackurl = '<' + currentUrl + "#" + problem_id + '|' + inputquestion + '>';
+                  var quest = $("div[data-childcomponent='" + problem_id + "'] p:first-child").text();
+                  var fullQuest = (quest == '') ? '' : 'Problem: ' + quest + '\n';
                   const slackBody = {
-                    text: '<!channel>(Unresolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + editor.getValue(),
+                    text: fullQuest + '<!channel>(Unresolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + editor.getValue(),
                     channel: 'C019TEX7KFV',
-                    token: 'xoxb-1345920338561-1342523238182-MrHaUJ6zadxh6i5qo6kfS7JV'
+                    token: 'xoxb-1345920338561-1342523238182-4FDOmLSCc3hNJyjb5Gu8Z4PD'
                   };
 
                   var mts = "";
@@ -1951,6 +1952,27 @@ export class ActiveCode extends RunestoneBase {
                     time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'}))
                 };
                 currentDocForDiscussion.data[currentQuestIndex].chat.push(newData);
+                var ans = eBookConfig.username + ":" + answerValue;
+                var ansCode = "Code:\n" + answerCode;
+                var textValue = (answerCode == null) ? ans : ans + "\n" + ansCode;
+
+                const slackBody = {
+                  text: textValue,
+                  channel: 'C019TEX7KFV',
+                  token: 'xoxb-1345920338561-1342523238182-4FDOmLSCc3hNJyjb5Gu8Z4PD',
+                  thread_ts: currentDocForDiscussion.data[currentQuestIndex].ts
+                };
+
+                $.ajax({
+                  type: 'POST',
+                  url: "https://slack.com/api/chat.postMessage",
+                  data: slackBody,
+                  dataType: "text",
+                  error: function(e) {
+                    console.log(e);
+                  },
+                  success: function (msg) {}
+                });
 
                 currentDocForDiscussion.submitOp([{ p: [currentQuestIndex],
                     ld: currentDocForDiscussion.data[currentQuestIndex],
@@ -2124,7 +2146,6 @@ export class ActiveCode extends RunestoneBase {
          */
         var testDoc = connection_mini.get("ac2_5_1", "helpSession");
         function showQuestionList() {
-          console.log(testDoc.data);
           if ($("#showQuestButton" + problem_id)[0].innerHTML == "Show Question") {
             showTitles();
             document.getElementById("codeHightlight" + problem_id).style.display = 'none';
@@ -3083,7 +3104,6 @@ export class ActiveCode extends RunestoneBase {
     }
 }
 
-
 var languageExtensions = {
     python: "py",
     html: "html",
@@ -3097,7 +3117,6 @@ var languageExtensions = {
 };
 
 var errorText = {};
-
 errorText.ParseError = $.i18n("msg_sctivecode_parse_error");
 errorText.ParseErrorFix = $.i18n("msg_sctivecode_parse_error_fix");
 errorText.TypeError = $.i18n("msg_activecode_type_error");
