@@ -1633,39 +1633,117 @@ export class ActiveCode extends RunestoneBase {
          * Change the resolved status of each discussion.
          */
         function changeResolve(questIndex, ListIndex, userID) {
-          var inputquestion = currentDocForDiscussion.data[questIndex].question;
-          var code = currentDocForDiscussion.data[questIndex].code;
-          var slackurl = '<' + currentUrl + "#" + problem_id + '|' + inputquestion + '>';
-          if (userID == eBookConfig.username){
-            if (currentDocForDiscussion.data[questIndex].resolved){
-              currentDocForDiscussion.data[questIndex].resolved = false;
-              discussionList.data[ListIndex].resolved = false;
+            if (userID == eBookConfig.username){
+  
+              var inputquestion = currentDocForDiscussion.data[questIndex].question;
+              var slackurl = '<' + currentUrl + "#" + problem_id + '|' + inputquestion + '>';
+              var quest = $("div[data-childcomponent='" + problem_id + "'] p:first-child").text();
+              if (quest == ''){quest = "Not Assessment Chapter";}
+              var chapter = document.title.split("—")[0];
+              var editorCode = currentDocForDiscussion.data[questIndex].code;
+              var res;
+              var block;
+              if (currentDocForDiscussion.data[questIndex].resolved){
+                  res = "Unresolved";
+                  var block = [
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Book problem:* " + quest 
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Status*: " + res
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Chapter:* " + chapter
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Discussion problem:* " + slackurl
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Code*:" + "```" + editorCode + "```"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "divider"
+                    }
+                  ];
+              } else {
+                  res = "Resolved";
+                  var block = [
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Status*: " + res
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Discussion problem:* " + slackurl
+                        }
+                      ]
+                    },
+                    {
+                      "type": "divider"
+                    }
+                  ];
+              }
+  
               const slackBody = {
-                text: '<!channel>(Unresolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + code,
                 channel: 'C019TEX7KFV',
-                ts: currentDocForDiscussion.data[questIndex].ts,
-                token: 'xoxb-1345920338561-1339533625732-OAqNgmobx8Soj60kMCt5iFma'
+                blocks: JSON.stringify(block),
+                token: 'xoxb-1345920338561-1342523238182-WZmxXbd5xIzGGFDzg4Lp1qdy',
               };
-             $.ajax({
-              type: 'POST',
-              url: "https://slack.com/api/chat.update",
-              data: slackBody,
-              dataType: "text",
-              error: function(e) {
-                console.log(e);
-              },
-              success: function (msg) {console.log("success!");}
-            });
-            } else {
-              currentDocForDiscussion.data[questIndex].resolved = true;
-              discussionList.data[ListIndex].resolved = true;
-              const slackBody = {
-                text: '<!channel>(Resolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + code,
-                channel: 'C019TEX7KFV',
-                ts: currentDocForDiscussion.data[questIndex].ts,
-                token: 'xoxb-1345920338561-1339533625732-OAqNgmobx8Soj60kMCt5iFma'
-              };
-              $.ajax({
+  
+              if (currentDocForDiscussion.data[questIndex].resolved){
+                currentDocForDiscussion.data[questIndex].resolved = false;
+                discussionList.data[ListIndex].resolved = false;
+                const slackBody = {
+                  blocks: JSON.stringify(block),
+                  channel: 'C019TEX7KFV',
+                  ts: currentDocForDiscussion.data[questIndex].ts,
+                  token: 'xoxb-1345920338561-1342523238182-WZmxXbd5xIzGGFDzg4Lp1qdy'
+                };
+               $.ajax({
                 type: 'POST',
                 url: "https://slack.com/api/chat.update",
                 data: slackBody,
@@ -1675,11 +1753,30 @@ export class ActiveCode extends RunestoneBase {
                 },
                 success: function (msg) {console.log("success!");}
               });
+              } else {
+                currentDocForDiscussion.data[questIndex].resolved = true;
+                discussionList.data[ListIndex].resolved = true;
+                const slackBody = {
+                  blocks: JSON.stringify(block),
+                  channel: 'C019TEX7KFV',
+                  ts: currentDocForDiscussion.data[questIndex].ts,
+                  token: 'xoxb-1345920338561-1342523238182-WZmxXbd5xIzGGFDzg4Lp1qdy'
+                };
+                $.ajax({
+                  type: 'POST',
+                  url: "https://slack.com/api/chat.update",
+                  data: slackBody,
+                  dataType: "text",
+                  error: function(e) {
+                    console.log(e);
+                  },
+                  success: function (msg) {console.log("success!");}
+                });
+              }
+               currentDocForDiscussion.submitOp([{ p: [questIndex], ld: currentDocForDiscussion.data[questIndex], li:currentDocForDiscussion.data[questIndex]}]);
+               discussionList.submitOp([{ p: [ListIndex], ld: discussionList.data[ListIndex], li:discussionList.data[ListIndex]}]);
             }
-             currentDocForDiscussion.submitOp([{ p: [questIndex], ld: currentDocForDiscussion.data[questIndex], li:currentDocForDiscussion.data[questIndex]}]);
-             discussionList.submitOp([{ p: [ListIndex], ld: discussionList.data[ListIndex], li:discussionList.data[ListIndex]}]);
-          }
-       }
+         }
 
         /**
          * Change the clicked status of each discussion.
@@ -1828,87 +1925,151 @@ export class ActiveCode extends RunestoneBase {
          * Raise a new question to the discussion session. 
          */
         function addNewDiscussionSession() {
-          var listIndex = document.getElementById("questions" + problem_id).childNodes.length;
-          var question = $("textarea#questInput" + problem_id).val();
-          if(!question.match(/^\s*$/)) {
-              currentDocForDiscussion.fetch(function (err) {
-
-                  var inputquestion = question;
-                  if (err) throw err;
-                  if (currentDocForDiscussion.type === null) {
-                      currentDocForDiscussion.create([]);
-                  }
-                  if (discussionList.type === null) {
-                      discussionList.create([]);
-                  }
-                  var time = String(new Date().getTime());
-                  var dataLength = currentDocForDiscussion.data.length;
-                  var listLength = discussionList.data.length;
-
-                  // TODO: slack
-                  var slackurl = '<' + currentUrl + "#" + problem_id + '|' + inputquestion + '>';
-                  var quest = $("div[data-childcomponent='" + problem_id + "'] p:first-child").text();
-                  var fullQuest = (quest == '') ? '' : 'Problem: ' + quest + '\n';
-                  const slackBody = {
-                    text: fullQuest + '<!channel>(Unresolved) ' + slackurl + ' in chapter ' + document.title.split("—")[0] + "\n" + editor.getValue(),
-                    channel: 'C019TEX7KFV',
-                    token: 'xoxb-1345920338561-1342523238182-4FDOmLSCc3hNJyjb5Gu8Z4PD'
-                  };
-
-                  var mts = "";
-                  $.ajax({
-                    type: 'POST',
-                    url: "https://slack.com/api/chat.postMessage",
-                    data: slackBody,
-                    dataType: "text",
-                    error: function(e) {
-                      console.log(e);
-                    },
-                    success: function (msg) {
-                      var obj = JSON.parse(msg)
-                      mts = obj.ts;
-                      var newData = {
-                        index: dataLength,
-                        indexList: listLength,
-                        user: eBookConfig.username,
-                        question: inputquestion,
-                        chat: [],
-                        code: editor.getValue(),
-                        id: time,
-                        time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
-                        resolved: false, 
-                        ts: mts,
-                      };
-                      var curUser = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
-                      // add the question to the global menu
-                      var newList = {
-                        index: listLength,
-                        question: inputquestion,
-                        chapter: document.title.split("—")[0],
-                        listIndex: listIndex+1,
-                        time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
-                        clicked: false,
-                        code: editor.getValue(),
-                        newindex: dataLength,
-                        id: time,
-                        url: currentUrl + "#" + problem_id,
-                        user: curUser,
-                        problemId: problem_id,
-                        resolved: false,
-                      };
-                      currentDocForDiscussion.submitOp([{ p: [dataLength], li: newData }]);
-                      discussionList.submitOp([{p: [listLength], li: newList}]);
-                      $("textarea#questInput" + problem_id).val("");
-                      $('#questModal' + problem_id).modal('toggle');
-                      showQuestDetailCallback(newData.id, newData.code, newData.index, problem_id);
+            var listIndex = document.getElementById("questions" + problem_id).childNodes.length;
+            var question = $("textarea#questInput" + problem_id).val();
+            if(!question.match(/^\s*$/)) {
+                currentDocForDiscussion.fetch(function (err) {
+  
+                    var inputquestion = question;
+                    if (err) throw err;
+                    if (currentDocForDiscussion.type === null) {
+                        currentDocForDiscussion.create([]);
                     }
-                  });
-              });
-              function showQuestDetailCallback(questId, questCode, questIndex, problem_id) {
-                showQuestDetail(questId, questCode, questIndex, problem_id);
-              }
+                    if (discussionList.type === null) {
+                        discussionList.create([]);
+                    }
+                    var time = String(new Date().getTime());
+                    var dataLength = currentDocForDiscussion.data.length;
+                    var listLength = discussionList.data.length;
+  
+                    // TODO: slack
+                    var slackurl = '<' + currentUrl + "#" + problem_id + '|' + inputquestion + '>';
+                    var quest = $("div[data-childcomponent='" + problem_id + "'] p:first-child").text();
+                    if (quest == ''){quest = "Not Assessment Chapter";}
+                    
+                    var chapter = document.title.split("—")[0];
+                    var editorCode = editor.getValue();
+  
+                    var time = String(new Date().getTime());
+                    var dataLength = currentDocForDiscussion.data.length;
+                    var listLength = discussionList.data.length;
+  
+                    var block = [
+                      {
+                        "type": "divider"
+                      },
+                      {
+                        "type": "context",
+                        "elements": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Book problem:* " + quest 
+                          }
+                        ]
+                      },
+                      {
+                        "type": "context",
+                        "elements": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Status*: Unresolved"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "context",
+                        "elements": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Chapter:* " + chapter
+                          }
+                        ]
+                      },
+                      {
+                        "type": "context",
+                        "elements": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Discussion problem:* " + slackurl
+                          }
+                        ]
+                      },
+                      {
+                        "type": "context",
+                        "elements": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Code*:" + "```" + editorCode + "```"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "divider"
+                      }
+                    ];
+  
+                    const slackBody = {
+                      channel: 'C019TEX7KFV',
+                      blocks: JSON.stringify(block),
+                      token: 'xoxb-1345920338561-1342523238182-WZmxXbd5xIzGGFDzg4Lp1qdy',
+                    };
+  
+                    console.log("debug");
+                    
+                    var mts = "";
+                    $.ajax({
+                      type: 'POST',
+                      url: "https://slack.com/api/chat.postMessage",
+                      data: slackBody,
+                      dataType: "text",
+                      error: function(e) {
+                        console.log(e);
+                      },
+                      success: function (msg) {
+                        var obj = JSON.parse(msg);
+                        mts = obj.ts;
+                        var newData = {
+                          index: dataLength,
+                          indexList: listLength,
+                          user: eBookConfig.username,
+                          question: inputquestion,
+                          chat: [],
+                          code: editor.getValue(),
+                          id: time,
+                          time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
+                          resolved: false, 
+                          ts: mts,
+                        };
+                        var curUser = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
+                        // add the question to the global menu
+                        var newList = {
+                          index: listLength,
+                          question: inputquestion,
+                          chapter: document.title.split("—")[0],
+                          listIndex: listIndex+1,
+                          time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
+                          clicked: false,
+                          code: editor.getValue(),
+                          newindex: dataLength,
+                          id: time,
+                          url: currentUrl + "#" + problem_id,
+                          user: curUser,
+                          problemId: problem_id,
+                          resolved: false,
+                        };
+                        currentDocForDiscussion.submitOp([{ p: [dataLength], li: newData }]);
+                        discussionList.submitOp([{p: [listLength], li: newList}]);
+                        $("textarea#questInput" + problem_id).val("");
+                        $('#questModal' + problem_id).modal('toggle');
+                        showQuestDetailCallback(newData.id, newData.code, newData.index, problem_id);
+                      }
+                    });
+                });
+                function showQuestDetailCallback(questId, questCode, questIndex, problem_id) {
+                  showQuestDetail(questId, questCode, questIndex, problem_id);
+                }
+            }
           }
-        }
 
         /**
          * Raise a new response(chat) in the question in one discussion.
