@@ -20,9 +20,7 @@ import "./../css/activecode.css";
 import "codemirror/lib/codemirror.css";
 import codemirror from "codemirror";
 
-/**
- * Build the global menu to each page.
- */
+// activecode.js begins here
 function buildGlobalMenu() {
     // Add the global menu to each page
     let rightNav = $('.navbar-right');
@@ -280,10 +278,11 @@ window.edList = {};
  */
 var socket, connection, doc;
 var chatcodesServer = "chat.codes";
-var currentUrl = window.location.href.split("#")[0];
+var currentUrl = window.location.href.split("#")[0].split("?")[0];
 var socket_mini, connection_mini;
 var socket_codecontent, connection_codecontent;
-
+const slackBotToken = '';
+const slackBotChannel = '';
 
 // separate into constructor and init
 export class ActiveCode extends RunestoneBase {
@@ -691,12 +690,6 @@ export class ActiveCode extends RunestoneBase {
             );
         }
 
-
-
-        /**
-         * TODO: New code begins here !
-         */
-        
         var thisCodeProblem;
         var editor = this.editor;
         var editorHightlight = this.editorHightlight;
@@ -735,12 +728,13 @@ export class ActiveCode extends RunestoneBase {
         var codePointer = new Array();
         var currentQuest;
         var currentCode;
-        var currentQuestIndex;
+        var currentQuestIndex = -1;
+        var lastSyncCodeTime = new Date().getTime();
 
         // button for add new discussion
         const helpButton = document.createElement("button");
         $(helpButton).addClass("ac_opt btn btn-default");
-        $(helpButton).text("Help");
+        $(helpButton).text("Ask a Question");
         $(helpButton).css("margin-left", "10px");
         $(helpButton).attr("data-toggle", "modal");
         $(helpButton).attr("data-target", "#questModal" + problem_id);
@@ -765,16 +759,13 @@ export class ActiveCode extends RunestoneBase {
         // modal body
         const modalBodyDiv = document.createElement("div");
         $(modalBodyDiv).addClass("modal-body");
-        // modal body label
-        const modelBodyLabel = document.createElement("label");
-        $(modelBodyLabel).addClass("col-form-label");
-        $(modelBodyLabel).attr("for", "message-text");
-        $(modelBodyLabel).text("Input your question:");
         // modal body textarea
         const modelBodyText = document.createElement("textarea");
         $(modelBodyText).addClass("form-control");
+        $(modelBodyText).attr("placeholder", "Input your question here");
+        $(modelBodyText).attr("rows", "2");
+        $(modelBodyText).css("resize", "none");
         modelBodyText.id = "questInput" + problem_id;
-        modalBodyDiv.appendChild(modelBodyLabel);
         modalBodyDiv.appendChild(modelBodyText);
 
         // modal footer
@@ -833,8 +824,6 @@ export class ActiveCode extends RunestoneBase {
         liveCodeButton.style.display = 'none';
         liveCodeButton.id = "liveCodeButton" + problem_id;
         ctrlDiv.appendChild(liveCodeButton);
-
-        // discussion session
 
         // question list
         var questions = document.createElement("div");
@@ -917,7 +906,7 @@ export class ActiveCode extends RunestoneBase {
         const enterNotice = document.createElement("div");
         $(enterNotice).css("position", "absolute");
         $(enterNotice).css("bottom", "0px");
-        enterNotice.innerHTML = "Enter to send / Shift+Enter to enter a new line / Maximum 60 characters";
+        enterNotice.innerHTML = "Enter to send / Shift+Enter to enter a new line";
         inputDiv.appendChild(enterNotice);
         this.discussionDiv.appendChild(inputDiv);
 
@@ -949,8 +938,9 @@ export class ActiveCode extends RunestoneBase {
         });
 
         var discussionList = connection_mini.get('discussion', 'list');
-        var discussionWindow = connection_mini.get('discussion', 'window');
 
+        /*
+        var discussionWindow = connection_mini.get('discussion', 'window');
         if (discussionWindow.type === null) {
             discussionWindow.create([]);
             var windowInfo = {
@@ -958,6 +948,7 @@ export class ActiveCode extends RunestoneBase {
             }
             discussionWindow.submitOp([{ p: [0], li: windowInfo}]);
         }
+        */
 
         // add the new discussion to the sideBar
         discussionList.fetch(function(err) {
@@ -971,12 +962,52 @@ export class ActiveCode extends RunestoneBase {
         editor.on(
           "change",
           function () {
+              var currentTimeStamp = new Date().getTime();
+              if (currentQuestIndex != -1 &&
+                    currentTimeStamp - lastSyncCodeTime > 15000 &&
+                    currentDocForDiscussion.data[currentQuestIndex].codeTS != null &&
+                    currentDocForDiscussion.data[currentQuestIndex].code != editor.getValue()) {
+                lastSyncCodeTime = currentTimeStamp;
+
+                setTimeout(function () {
+                  var block = [
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Code*:" + "```" + editor.getValue() + "```"
+                        }
+                      ]
+                    }
+                  ];
+                  const slackBody = {
+                    blocks: JSON.stringify(block),
+                    channel: slackBotChannel,
+                    ts: currentDocForDiscussion.data[currentQuestIndex].codeTS,
+                    token: slackBotToken
+                  };
+                  $.ajax({
+                    type: 'POST',
+                    url: "https://slack.com/api/chat.update",
+                    data: slackBody,
+                    dataType: "text",
+                    error: function(e) {
+                      console.log(e);
+                    },
+                    success: function (msg) {console.log("success!");}
+                  });
+                }, 15000);
+              }
+              
               var target = document.getElementsByClassName("detailDiv" + problem_id);
               for (var i = 0; i < target.length; ++i){
                 if (target[i].style.display == "block"){
                   var detail = target[i].childNodes[1];
                   if (!document.getElementById("realtimeDiff" + problem_id + "_" + i)){
-
                       var realtimeDiff = document.createElement("div");
                       realtimeDiff.id = "realtimeDiff" + problem_id + "_" + i;
                       realtimeDiff.setAttribute(
@@ -1013,7 +1044,6 @@ export class ActiveCode extends RunestoneBase {
                       $(diffDiv).css("float", "none");
                       $(diffDiv).css("display", "none");
                       realtimeDiff.appendChild(diffDiv);
-
                       detail.appendChild(realtimeDiff);
                   }
                   var len = currentDocForDiscussion.data[i].chat.length;
@@ -1068,7 +1098,6 @@ export class ActiveCode extends RunestoneBase {
               }
           }.bind(this)
         ); 
-
 
         /**
          * Fetch discussion from sharedb and add them into the global menu.
@@ -1224,6 +1253,7 @@ export class ActiveCode extends RunestoneBase {
                 }
 
                 // Pop the notification window based on the user answer history
+                /*
                 if (discussionWindow.type != null){
                     if (discussionWindow.data[0].size != discussionList.data.length) {
 
@@ -1240,8 +1270,6 @@ export class ActiveCode extends RunestoneBase {
                         // the current user has already run this problem, then display the pop window
                         // the current user is not the user who asked this problem, then display the pop window
                         var newDiscussion = discussionList.data[currentLength-1];
-                        var target = eBookConfig.username + newDiscussion.problemId;
-
                         var temp = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
                         var data = { acid: newDiscussion.problemId};
                         jQuery
@@ -1300,6 +1328,7 @@ export class ActiveCode extends RunestoneBase {
 
                     }
                 }
+                */
             }
         }
 
@@ -1728,20 +1757,14 @@ export class ActiveCode extends RunestoneBase {
                   ];
               }
   
-              const slackBody = {
-                channel: 'C019TEX7KFV',
-                blocks: JSON.stringify(block),
-                token: 'xoxb-1345920338561-1342523238182-WZmxXbd5xIzGGFDzg4Lp1qdy',
-              };
-  
               if (currentDocForDiscussion.data[questIndex].resolved){
                 currentDocForDiscussion.data[questIndex].resolved = false;
                 discussionList.data[ListIndex].resolved = false;
                 const slackBody = {
                   blocks: JSON.stringify(block),
-                  channel: 'C019TEX7KFV',
+                  channel: slackBotChannel,
                   ts: currentDocForDiscussion.data[questIndex].ts,
-                  token: 'xoxb-1345920338561-1342523238182-WZmxXbd5xIzGGFDzg4Lp1qdy'
+                  token: slackBotToken
                 };
                $.ajax({
                 type: 'POST',
@@ -1758,9 +1781,9 @@ export class ActiveCode extends RunestoneBase {
                 discussionList.data[ListIndex].resolved = true;
                 const slackBody = {
                   blocks: JSON.stringify(block),
-                  channel: 'C019TEX7KFV',
+                  channel: slackBotChannel,
                   ts: currentDocForDiscussion.data[questIndex].ts,
-                  token: 'xoxb-1345920338561-1342523238182-WZmxXbd5xIzGGFDzg4Lp1qdy'
+                  token: slackBotToken
                 };
                 $.ajax({
                   type: 'POST',
@@ -1781,7 +1804,6 @@ export class ActiveCode extends RunestoneBase {
         /**
          * Change the clicked status of each discussion.
          * Not used now due to there is only one global menu.
-         */
         function readDiscussionList(index) {
             if (!discussionList.data[index].clicked){
                 discussionList.data[index].clicked = true;
@@ -1800,6 +1822,8 @@ export class ActiveCode extends RunestoneBase {
                 }
             }
         }
+        **
+        */
 
         /**
          * Display the discussion session for one question.
@@ -1822,12 +1846,14 @@ export class ActiveCode extends RunestoneBase {
             document.getElementById("answerSubmitButton" + problem_id).style.display = 'none';
             document.getElementById("submitButton" + problem_id).style.display = 'none';
             document.getElementById("liveCodeButton" + problem_id).style.display = 'none';
+            currentQuestIndex = -1;
 
             var codeEditorWindow = $("div#" + problem_id + " > .ac_code_div");
 
             if (codeEditorWindow.hasClass("col-md-10")) {
                 codeEditorWindow.addClass("col-md-6").removeClass("col-md-10");
             }
+
             helpSession.destroy();
             currentCodeDoc.fetch(function (err) {
                 if (err) throw err;
@@ -1836,12 +1862,17 @@ export class ActiveCode extends RunestoneBase {
                         {
                             code: editor.getValue(),
                         },
-                        acallback
+                        hsacallback
                     );
                     return;
                 }
-                acallback();
+                editor.getDoc().setValue(currentCodeDoc.data.code);
+                hsacallback();
             });
+
+            function hsacallback() {
+              thisCodeProblem = new ShareDBCodeMirrorBinding(editor, currentCodeDoc);
+            }
         }
 
         /**
@@ -1909,14 +1940,15 @@ export class ActiveCode extends RunestoneBase {
                         {
                             code: currentCode,
                         },
-                        acallback
+                        dsacallback
                     );
                     return;
                 }
-                acallback();
+                editor.getDoc().setValue(DisSessionDoc.data.code);
+                dsacallback();
             });
 
-            function acallback() {
+            function dsacallback() {
                 helpSession = new ShareDBCodeMirrorBinding(editor, DisSessionDoc);
             }
         }
@@ -2009,12 +2041,11 @@ export class ActiveCode extends RunestoneBase {
                     ];
   
                     const slackBody = {
-                      channel: 'C019TEX7KFV',
+                      text: "New discussion Problem: " + inputquestion,
+                      channel: slackBotChannel,
                       blocks: JSON.stringify(block),
-                      token: 'xoxb-1345920338561-1342523238182-WZmxXbd5xIzGGFDzg4Lp1qdy',
+                      token: slackBotToken,
                     };
-  
-                    console.log("debug");
                     
                     var mts = "";
                     $.ajax({
@@ -2028,40 +2059,79 @@ export class ActiveCode extends RunestoneBase {
                       success: function (msg) {
                         var obj = JSON.parse(msg);
                         mts = obj.ts;
-                        var newData = {
-                          index: dataLength,
-                          indexList: listLength,
-                          user: eBookConfig.username,
-                          question: inputquestion,
-                          chat: [],
-                          code: editor.getValue(),
-                          id: time,
-                          time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
-                          resolved: false, 
-                          ts: mts,
+
+                        var replyCodeBlock = [
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "context",
+                            "elements": [
+                              {
+                                "type": "mrkdwn",
+                                "text": "*Code*:" + "```" + editorCode + "```"
+                              }
+                            ]
+                          }
+                        ];
+
+                        const replyCodeSlackBody = {
+                          text: "Question Code Sync",
+                          channel: slackBotChannel,
+                          token: slackBotToken,
+                          blocks: JSON.stringify(replyCodeBlock),
+                          thread_ts: mts
                         };
-                        var curUser = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
-                        // add the question to the global menu
-                        var newList = {
-                          index: listLength,
-                          question: inputquestion,
-                          chapter: document.title.split("—")[0],
-                          listIndex: listIndex+1,
-                          time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
-                          clicked: false,
-                          code: editor.getValue(),
-                          newindex: dataLength,
-                          id: time,
-                          url: currentUrl + "#" + problem_id,
-                          user: curUser,
-                          problemId: problem_id,
-                          resolved: false,
-                        };
-                        currentDocForDiscussion.submitOp([{ p: [dataLength], li: newData }]);
-                        discussionList.submitOp([{p: [listLength], li: newList}]);
-                        $("textarea#questInput" + problem_id).val("");
-                        $('#questModal' + problem_id).modal('toggle');
-                        showQuestDetailCallback(newData.id, newData.code, newData.index, problem_id);
+        
+                        $.ajax({
+                          type: 'POST',
+                          url: "https://slack.com/api/chat.postMessage",
+                          data: replyCodeSlackBody,
+                          dataType: "text",
+                          error: function(e) {
+                            console.log(e);
+                          },
+                          success: function (replyMsg) {
+                            var replyObj = JSON.parse(replyMsg);
+                            var codeMts = replyObj.ts;
+
+                            var newData = {
+                              index: dataLength,
+                              indexList: listLength,
+                              user: eBookConfig.username,
+                              question: inputquestion,
+                              chat: [],
+                              code: editor.getValue(),
+                              id: time,
+                              time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
+                              resolved: false,
+                              ts: mts,
+                              codeTS: codeMts
+                            };
+                            var curUser = document.getElementsByClassName("loggedinuser")[0].innerHTML.split(': ')[1];
+                            // add the question to the global menu
+                            var newList = {
+                              index: listLength,
+                              question: inputquestion,
+                              chapter: document.title.split("—")[0],
+                              listIndex: listIndex+1,
+                              time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'})),
+                              clicked: false,
+                              code: editor.getValue(),
+                              newindex: dataLength,
+                              id: time,
+                              url: currentUrl + "#" + problem_id,
+                              user: curUser,
+                              problemId: problem_id,
+                              resolved: false,
+                            };
+                            currentDocForDiscussion.submitOp([{ p: [dataLength], li: newData }]);
+                            discussionList.submitOp([{p: [listLength], li: newList}]);
+                            $("textarea#questInput" + problem_id).val("");
+                            $('#questModal' + problem_id).modal('toggle');
+                            showQuestDetailCallback(newData.id, newData.code, newData.index, problem_id);
+                          }
+                        });
                       }
                     });
                 });
@@ -2113,14 +2183,13 @@ export class ActiveCode extends RunestoneBase {
                     time: String(new Date().toLocaleTimeString(['en'], {year: '2-digit',  month: 'numeric',  day: 'numeric', hour: '2-digit', minute:'2-digit'}))
                 };
                 currentDocForDiscussion.data[currentQuestIndex].chat.push(newData);
-                var ans = eBookConfig.username + ":" + answerValue;
-                var ansCode = "Code:\n" + answerCode;
-                var textValue = (answerCode == null) ? ans : ans + "\n" + ansCode;
+                var ans = "*" + eBookConfig.username  + ":*" + "\n" + answerValue;
+                var textValue = (answerCode == null) ? ans : ans + "\n" + "*Code:*\n" + "```" + answerCode + "```";
 
                 const slackBody = {
                   text: textValue,
-                  channel: 'C019TEX7KFV',
-                  token: 'xoxb-1345920338561-1342523238182-4FDOmLSCc3hNJyjb5Gu8Z4PD',
+                  channel: slackBotChannel,
+                  token: slackBotToken,
                   thread_ts: currentDocForDiscussion.data[currentQuestIndex].ts
                 };
 
@@ -2308,10 +2377,12 @@ export class ActiveCode extends RunestoneBase {
         var testDoc = connection_mini.get("ac2_5_1", "helpSession");
         function showQuestionList() {
           if ($("#showQuestButton" + problem_id)[0].innerHTML == "Show Question") {
-            showTitles();
+            if (document.getElementById("inputDiv" + problem_id).style.display != 'none') {
+              document.getElementById("inputDiv" + problem_id).style.display = 'none';
+              showTitles();
+            }
             document.getElementById("codeHightlight" + problem_id).style.display = 'none';
             document.getElementById("code" + problem_id).style.display = '';
-            document.getElementById("inputDiv" + problem_id).style.display = 'none';
             document.getElementById("answerLinkButton" + problem_id).style.display = 'none';
             document.getElementById("answerSubmitButton" + problem_id).style.display = 'none';
             document.getElementById("submitButton" + problem_id).style.display = 'none';
@@ -2322,7 +2393,7 @@ export class ActiveCode extends RunestoneBase {
           else {
             document.getElementById("codeHightlight" + problem_id).style.display = 'none';
             document.getElementById("code" + problem_id).style.display = '';
-            document.getElementById("inputDiv" + problem_id).style.display = 'none';
+            //document.getElementById("inputDiv" + problem_id).style.display = 'none';
             document.getElementById("answerLinkButton" + problem_id).style.display = 'none';
             document.getElementById("answerSubmitButton" + problem_id).style.display = 'none';
             document.getElementById("submitButton" + problem_id).style.display = 'none';
@@ -2330,6 +2401,7 @@ export class ActiveCode extends RunestoneBase {
             document.getElementById("discussionDiv" + problem_id).style.display = 'none';
             $("#showQuestButton" + problem_id).text("Show Question");
           }
+          currentQuestIndex = -1;
         }
 
 
