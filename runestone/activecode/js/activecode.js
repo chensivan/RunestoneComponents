@@ -22,6 +22,9 @@ import codemirror from "codemirror";
 
 // activecode.js begins here
 function buildGlobalMenu() {
+    if (document.getElementById("globalMenu")){
+        return;
+    }
     // Add the global menu to each page
     let rightNav = $('.navbar-right');
     var menu = document.createElement('li');
@@ -798,6 +801,8 @@ export class ActiveCode extends RunestoneBase {
         // modal dialog
         const modalDialog = document.createElement("div");
         $(modalDialog).addClass("modal-dialog");
+        // specify the width of the dialog
+        $(modalDialog).css("width", "600px");
         modalDialog.appendChild(modalContentDiv);
 
         // modal fade
@@ -1445,12 +1450,13 @@ export class ActiveCode extends RunestoneBase {
                         $(titleLeft).css("float", "left");
                         $(titleLeft).css("margin-top", "10px");
                         $(titleLeft).css("text-overflow", "ellipsis");
-                        $(titleLeft).css("width", "400px");
+                        $(titleLeft).css("width", "350px");
                         $(titleLeft).css("white-space", "nowrap");
                         $(titleLeft).css("overflow", "hidden");
                         $(titleRight).css("float", "right");
                         $(titleRight).css("margin-top", "10px");
                         $(titleRight).css("margin-right", "5px");
+                        $(titleRight).css("width", "150px");
 
                         var titleIndex = document.createElement("b");
                         titleIndex.innerHTML = "Q" + (index-1) + ":";
