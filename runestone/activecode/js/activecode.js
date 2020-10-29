@@ -48,9 +48,9 @@ function buildGlobalMenu() {
     menuInnerB.setAttribute(
         "style",
         "height: 16px; min-width: 16px; border-radius: 16px; line-height: 16px; \
-         padding: 0 2px; font-size: 12px; font-weight: bold; text-align: center; \
-         position: absolute; top: 3px; right: 2px; background-color: red; \
-         color: white; display: none;"
+        padding: 0 2px; font-size: 12px; font-weight: bold; text-align: center; \
+        position: absolute; top: 3px; right: 2px; background-color: red; \
+        color: white; display: none;"
     );
     menu.appendChild(menuInnerA);
     menu.appendChild(menuInnerB);
@@ -62,16 +62,16 @@ function buildGlobalMenu() {
     sideBar.id = "sideBar";
     sideBar.setAttribute(
         "style",
-        "height: 100%; width: 0; position: fixed; z-index: 1; \
-         top: 0; left: 0; background-color: #eeeeee; overflow-x: hidden; \
-         transition: 0.5s;"
+        "height: 90%; width: 0; position: fixed; z-index: 1; \
+        top: 0; left: 0; background-color: #eeeeee; overflow-x: hidden; \
+        transition: 0.5s;margin-top:30px;border-bottom: 3px solid #dbdbdb;"
     );
     var topInfo = document.createElement('div');
     topInfo.id = "topInfo";
     topInfo.setAttribute(
         "style",
         "background: #fff; height: 40px; z-index: 9999; \
-         top: 0px; border-bottom: 2px solid #dbdbdb; font-size: 23px;"
+        top: 0px; border-bottom: 3px solid #dbdbdb; border-top: 3px solid #dbdbdb; font-size: 23px;"
     );
     topInfo.innerHTML = "&nbsp;<span class='glyphicon glyphicon-info-sign' aria-hidden='true'></span>  &nbsp; Discussion List";
     sideBar.appendChild(topInfo);
@@ -81,8 +81,8 @@ function buildGlobalMenu() {
     backBar.id = "backBar";
     backBar.setAttribute(
         "style",
-        "background: rgba(0,0,0,.08); position: fixed; height: 100%; \
-         width: 22px; left: 0; transition: 0.5s; pointer-events: none;"
+        "background: rgba(0,0,0,.08); position: fixed; height: 90%; \
+        width: 22px; left: 0; transition: 0.5s; pointer-events: none;margin-top:30px;"
     );
 
     // Create the side button to open and close the sidebar
@@ -93,8 +93,8 @@ function buildGlobalMenu() {
     closeButton.setAttribute(
         "style",
         "position: absolute; z-index: 1; left: 0px; top: 0; transition: 0.5s; \
-         width: 36px; height: 40px; border: solid 2px #dbdbdb; outline: none;\
-         background: #fff; color: #9c9c9c; border-style: none solid solid none;"
+        width: 36px; height: 40px; border: solid 3px #dbdbdb; outline: none;\
+        background: #fff; color: #9c9c9c; border-style: solid solid solid none;margin-top:30px;"
     );
     closeButton.onclick = function () {
         changeNav();
@@ -104,6 +104,7 @@ function buildGlobalMenu() {
     rightNav.prepend(closeButton);
 
     // Create the bottom-right pop window
+    /*
     var popWindow = document.createElement('div');
     popWindow.id = "popWindow";
     var closeWindow = document.createElement('a');
@@ -119,11 +120,85 @@ function buildGlobalMenu() {
     popWindow.setAttribute(
         "style",
         "position: fixed; z-index: 10; right: 20px; bottom: 20px; \
-         display: none; border-style: solid solid solid solid; \
-         border: solid 2px black; background-color: white;"
+        display: none; border-style: solid solid solid solid; \
+        border: solid 2px black; background-color: white;"
     );
     rightNav.prepend(popWindow);
+    */
 }
+
+function buildGlobalStat() {
+  if (document.getElementById("globalStat")){
+    return;
+  }
+  // Add the global menu to each page
+  let rightNav = $('.navbar-right');
+
+  var stat = document.createElement('li');
+  stat.title = "Show Statistics";
+  stat.onclick = function () {
+      changeStat();
+  };
+  // Add stat button in the top toolbar
+  var statInner = document.createElement('a');
+  // statInner.href = "#";
+  statInner.id = "globalStat";
+  var globalStat = document.createElement('i');
+  $(globalStat).addClass("glyphicon glyphicon-stats");
+  $(globalStat).css("opacity", "0.9");
+  statInner.appendChild(globalStat);
+  stat.appendChild(statInner);
+  // Add the element to the html file
+  rightNav.prepend(stat);
+
+  // Create the sidebar to display the discussion items
+  var sideBar = document.createElement('div');
+  sideBar.id = "sideBarStat";
+  sideBar.setAttribute(
+      "style",
+      "height: 80%; width: 0; position: fixed; z-index: 1; \
+       top: 0; left: 0; background-color: #eeeeee; overflow-x: hidden; \
+       transition: 0.5s;margin-top:80px; border-bottom: 3px solid #dbdbdb;"
+  );
+  var topInfo = document.createElement('div');
+  topInfo.id = "topInfoStat";
+  topInfo.setAttribute(
+      "style",
+      "background: #fff; height: 40px; z-index: 9999; \
+       top: 0px; border-bottom: 3px solid #dbdbdb; border-top: 3px solid #dbdbdb; font-size: 23px;"
+  );
+  topInfo.innerHTML = "&nbsp;<span class='glyphicon glyphicon-info-sign' aria-hidden='true'></span>  &nbsp; Statistics Info";
+
+  sideBar.appendChild(topInfo);
+
+  // Create the separate bar of the background
+  var backBar = document.createElement('div');
+  backBar.id = "backBarStat";
+  backBar.setAttribute(
+      "style",
+      "background: rgba(0,0,0,.08); position: fixed; height: 80%; \
+       width: 22px; left: 0; transition: 0.5s; pointer-events: none;margin-top:80px; border-bottom: 3px solid #dbdbdb;"
+  );
+
+  // Create the side button to open and close the sidebar
+  var closeButton = document.createElement('button');
+  closeButton.id = "closeButtonStat";
+  closeButton.title = "Show Statistics";
+  $(closeButton).addClass("glyphicon glyphicon-chevron-right");
+  closeButton.setAttribute(
+      "style",
+      "position: absolute; z-index: 1; left: 0px; top: 0; transition: 0.5s; \
+       width: 36px; height: 40px; border: solid 3px #dbdbdb; outline: none;\
+       background: #fff; color: #9c9c9c; border-style: solid solid solid none;margin-top:80px;"
+  );
+  closeButton.onclick = function () {
+    changeStat();
+  };
+  rightNav.prepend(sideBar);
+  rightNav.prepend(backBar);
+  rightNav.prepend(closeButton);
+}
+
 function changeNav() {
     var target = document.getElementById("sideBar");
     if (target.style.width == "0px"){
@@ -143,9 +218,36 @@ function changeNav() {
         document.getElementById("closeButton").className = "glyphicon glyphicon-chevron-right";
         document.getElementById("backBar").style.left = "0px";
     }
+    document.getElementById("sideBarStat").style.left = "0px";
+    document.getElementById("sideBarStat").style.width = "0px";
+    document.getElementById("closeButtonStat").style.left = "0px";
+    document.getElementById("backBarStat").style.left = "0px";
+    document.getElementById("closeButtonStat").className = "glyphicon glyphicon-chevron-right";
+}
+
+function changeStat() {
+  var target = document.getElementById("sideBarStat");
+  if (target.style.width == "0px"){
+      target.style.width = "300px";
+      document.getElementById("closeButtonStat").style.left = "300px";
+      document.getElementById("closeButtonStat").className = "glyphicon glyphicon-chevron-left";
+      document.getElementById("backBarStat").style.left = "300px";
+      document.getElementById("globalStat").style.color = "";
+  } else {
+      target.style.width = "0px";
+      document.getElementById("closeButtonStat").style.left = "0px";
+      document.getElementById("closeButtonStat").className = "glyphicon glyphicon-chevron-right";
+      document.getElementById("backBarStat").style.left = "0px";
+  }
+  document.getElementById("sideBar").style.left = "0px";
+  document.getElementById("sideBar").style.width = "0px";
+  document.getElementById("closeButton").style.left = "0px";
+  document.getElementById("backBar").style.left = "0px";
+  document.getElementById("closeButton").className = "glyphicon glyphicon-chevron-right";
 }
 
 $(document).bind("runestone:login-complete",buildGlobalMenu);
+$(document).bind("runestone:login-complete",buildGlobalStat);
 
 /**
  * ShareDB base class, binding sharedb with codemirror.
@@ -284,11 +386,11 @@ var chatcodesServer = "chat.codes";
 var currentUrl = window.location.href.split("#")[0].split("?")[0];
 var socket_mini, connection_mini;
 var socket_codecontent, connection_codecontent;
-const slackBotToken = '';
-const slackBotChannel = '';
+const slackBotToken = 'xoxb-1345920338561-1342523238182-Dw707C0A5An2nH4PN713F2KF';
+const slackBotChannel = 'C019TEX7KFV';
 
 // separate into constructor and init
-export class ActiveCode extends RunestoneBase {
+class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
     constructor(opts) {
         super(opts);
         // RunestoneBase.prototype.init.apply(this, arguments);
@@ -430,7 +532,7 @@ export class ActiveCode extends RunestoneBase {
         codeTextArea.id = "codeTextArea" + this.divid;
         codeTextArea.value = this.code;
         codeDiv.appendChild(codeTextArea);
-        var editor = CodeMirror.fromTextArea(document.getElementById("codeTextArea" + this.divid), {
+        var editor = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("codeTextArea" + this.divid), {
             lineNumbers: true,
             styleSelectedText: true,
             mode: edmode,
@@ -450,7 +552,7 @@ export class ActiveCode extends RunestoneBase {
         const codeTextAreaHighlight = document.createElement("textarea");
         codeTextAreaHighlight.id = "codeTextAreaHighlight" + this.divid;
         codeHightlightDiv.appendChild(codeTextAreaHighlight);
-        var editorHightlight = CodeMirror.fromTextArea(document.getElementById("codeTextAreaHighlight" + this.divid), {
+        var editorHightlight = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("codeTextAreaHighlight" + this.divid), {
             lineNumbers: true,
             styleSelectedText: true,
             mode: edmode,
@@ -645,7 +747,7 @@ export class ActiveCode extends RunestoneBase {
             ctrlDiv.appendChild(butt);
             $(butt).click(
                 function () {
-                    new AudioTour(
+                    new _audiotour__WEBPACK_IMPORTED_MODULE_1__["default"](
                         this.divid,
                         this.code,
                         1,
@@ -916,7 +1018,7 @@ export class ActiveCode extends RunestoneBase {
         this.discussionDiv.appendChild(inputDiv);
 
         // create input code mirror
-        var inputCodeMirror = CodeMirror.fromTextArea(document.getElementById("inputTextArea" + this.divid), {
+        var inputCodeMirror = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("inputTextArea" + this.divid), {
             lineWrapping: true,
             styleSelectedText: true,
             mode: "null",
@@ -931,10 +1033,10 @@ export class ActiveCode extends RunestoneBase {
                                 }
                         },
         });
-
         inputCodeMirror.setSize(600, 65);
         var disSession = connection_mini.get(problem_id, "helpSession");
         var currentDocForDiscussion = disSession;
+        
         currentDocForDiscussion.fetch(function(err) {
             if(err) throw err;
             currentDocForDiscussion.subscribe(showAllDiscussionSession);
@@ -944,6 +1046,7 @@ export class ActiveCode extends RunestoneBase {
 
         var discussionList = connection_mini.get('discussion', 'list');
 
+        var discussionStat = connection_mini.get('discussion', 'stat');
         /*
         var discussionWindow = connection_mini.get('discussion', 'window');
         if (discussionWindow.type === null) {
@@ -960,8 +1063,15 @@ export class ActiveCode extends RunestoneBase {
             if(err) throw err;
             discussionList.subscribe(showAllDiscussionList);
             discussionList.on("op", showAllDiscussionList);
-            discussionList.on("create", showAllDiscussionSession);
+            discussionList.on("create", showAllDiscussionList);
         });
+
+        discussionStat.fetch(function(err) {
+          if(err) throw err;
+          discussionStat.subscribe(showAllDiscussionStat);
+          discussionStat.on("op", showAllDiscussionStat);
+          discussionStat.on("create", showAllDiscussionStat);
+      });
 
         // real time code diff
         editor.on(
@@ -1108,7 +1218,9 @@ export class ActiveCode extends RunestoneBase {
          * Fetch discussion from sharedb and add them into the global menu.
          */
         function showAllDiscussionList() {
+
             if (discussionList.type != null) {
+
                 var list = document.getElementById("sideBar");
                 while(list.lastChild){
                     list.removeChild(list.lastChild);
@@ -1250,7 +1362,7 @@ export class ActiveCode extends RunestoneBase {
                 topInfo.setAttribute(
                     "style",
                     "background: #fff; height: 40px; z-index: 9999; \
-                     top: 0px; border-bottom: 2px solid #dbdbdb; font-size: 23px;"
+                     top: 0px; border-bottom: 3px solid #dbdbdb; border-top: 3px solid #dbdbdb; font-size: 23px;"
                 );
                 topInfo.innerHTML = "&nbsp;<span class='glyphicon glyphicon-info-sign' aria-hidden='true'></span>  &nbsp; Discussion List";
                 if (!document.getElementById("topInfo")){
@@ -1437,9 +1549,9 @@ export class ActiveCode extends RunestoneBase {
                         $(resolvedButton).css("padding", "3px 6px 3px 6px");
                         $(resolvedButton).css("float", "right");
                         if (session.resolved){
-                          $(resolvedButton).text("Resolved");
+                          $(resolvedButton).text("Mark as Resolved");
                         } else {
-                          $(resolvedButton).text("Unresolved");
+                          $(resolvedButton).text("Mark as Unresolved");
                         }
                         resolvedButton.onclick = function() { changeResolve(session.index, session.indexList, session.user); };
                         problemTitle.appendChild(resolvedButton);
@@ -1475,10 +1587,13 @@ export class ActiveCode extends RunestoneBase {
                     }
 
                     var resolvedUpdateButton = document.getElementById("detailResolvedDiv" + problem_id + questId);
+                    //var flag = 0;
                     if (session.resolved){
-                      $(resolvedUpdateButton).text("Resolved");
+                      //flag = 1; 
+                      $(resolvedUpdateButton).text("Mark as Unresolved");
                     } else {
-                      $(resolvedUpdateButton).text("Unresolved");
+                      //flag = 0;
+                      $(resolvedUpdateButton).text("Mark as Resolved");
                     }
 
                     const detailsDiv = document.getElementById("detailDiv" + problem_id + questId);
@@ -1493,6 +1608,10 @@ export class ActiveCode extends RunestoneBase {
                     detailsDiv.appendChild(innerDetailsDiv);
                     if(session.chat.length != 0) {
                         let count = 0;
+                        let maxLike = 0;
+                        session.chat.forEach((ans) => {
+                            maxLike = Math.max(ans.likes.length, maxLike);
+                        });
                         session.chat.forEach((ans) => {
                             if (ans.index == 0)
                             {
@@ -1549,12 +1668,16 @@ export class ActiveCode extends RunestoneBase {
                                     index = pointer.answerEnd.ch;
                                 })
                             }
-
+                            
                             if (index < answer.length) {
                                 var text = answer.substring(index, answer.length);
+                                //console.log(text);
                                 var textSpan = document.createElement("span");
-                                textSpan.innerText = text;
+                                //var converter = new showdown.Converter();
+                                //var html = converter.makeHtml(text);
+                                textSpan.innerHTML = text;
                                 responseDiv.appendChild(textSpan);
+                                
                             }
 
                             // like count
@@ -1637,12 +1760,19 @@ export class ActiveCode extends RunestoneBase {
                             if (count == session.chat.length){
                                 // the last element
                                 $(responseDiv).css("border-bottom","solid 2px #dbdbdb");
+                                // $(responseDiv).css("background-color","#eeeeee");
+                            }
+
+                            if (likeCount == maxLike && maxLike != 0 && document.getElementById("detailDiv" + problem_id + questId).style.display == "none"){
+                                // the most like element
                                 $(responseDiv).css("background-color","#eeeeee");
                             }
                             
-                            innerDetailsDiv.appendChild(responseDiv);
-                        })
-                        ;
+                            if (answer.length != 0){
+                              // omit uploading the figure
+                              innerDetailsDiv.appendChild(responseDiv);
+                            }
+                        });
                     }
                     // scroll the div into the bottom
                     var objDiv = document.getElementById("innerDetailsDiv" + problem_id + questId);
@@ -1664,6 +1794,55 @@ export class ActiveCode extends RunestoneBase {
             }
         }
 
+
+        /**
+         * Update the statistics table.
+         */
+        function showAllDiscussionStat() {
+          var info = document.getElementById("sideBarStat");
+          while(info.childNodes.length >= 2){
+            info.removeChild(info.lastChild);
+          }
+          // in data
+          // 1 means one post
+          // 2 means one response
+          // 3 means one resolved
+          // 4 means cancel one resolved
+          var a=0,b=0,c=0,d=0;
+          console.log(discussionStat);
+          if (discussionStat.data != null){
+              for (var i = 0; i < discussionStat.data.length; ++i){
+                if (discussionStat.data[i] == 1){
+                  ++a;
+                }
+                if (discussionStat.data[i] == 2){
+                  ++b;
+                }
+                if (discussionStat.data[i] == 3){
+                  ++c;
+                }
+                if (discussionStat.data[i] == 4){
+                  ++d;
+                }
+              }
+              console.log(discussionStat);
+              var block1 = document.createElement("div");
+              var block2 = document.createElement("div");
+              var block3 = document.createElement("div");
+              var block4 = document.createElement("div");
+              $(block1).css("font-size", "25px");
+              $(block2).css("font-size", "25px");
+              $(block3).css("font-size", "25px");
+              $(block4).css("font-size", "25px");
+              block1.innerHTML = "Total posts: " + a;
+              block2.innerHTML = "Total responses: " + b;
+              block3.innerHTML = "Unresolved posts: " + (a-c+d);
+              info.appendChild(block1);
+              info.appendChild(block2);
+              info.appendChild(block3);
+              //info.appendChild(block4);
+          }
+        }
         /**
          * Change the resolved status of each discussion.
          */
@@ -1679,6 +1858,7 @@ export class ActiveCode extends RunestoneBase {
               var res;
               var block;
               if (currentDocForDiscussion.data[questIndex].resolved){
+                  discussionStat.submitOp([{p: [1], li: 4}]);
                   res = "Unresolved";
                   var block = [
                     {
@@ -1689,7 +1869,7 @@ export class ActiveCode extends RunestoneBase {
                       "elements": [
                         {
                           "type": "mrkdwn",
-                          "text": "*Book problem:* " + quest 
+                          "text": "*Status*: " + res
                         }
                       ]
                     },
@@ -1698,7 +1878,7 @@ export class ActiveCode extends RunestoneBase {
                       "elements": [
                         {
                           "type": "mrkdwn",
-                          "text": "*Status*: " + res
+                          "text": "*Book problem:* " + quest 
                         }
                       ]
                     },
@@ -1725,6 +1905,15 @@ export class ActiveCode extends RunestoneBase {
                       "elements": [
                         {
                           "type": "mrkdwn",
+                          "text": "*Note*: only plain text reply is supported"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
                           "text": "*Code*:" + "```" + editorCode + "```"
                         }
                       ]
@@ -1734,6 +1923,7 @@ export class ActiveCode extends RunestoneBase {
                     }
                   ];
               } else {
+                  discussionStat.submitOp([{p: [1], li: 3}]);
                   res = "Resolved";
                   var block = [
                     {
@@ -1754,6 +1944,15 @@ export class ActiveCode extends RunestoneBase {
                         {
                           "type": "mrkdwn",
                           "text": "*Discussion problem:* " + slackurl
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Note*: only plain text reply is supported"
                         }
                       ]
                     },
@@ -1976,6 +2175,9 @@ export class ActiveCode extends RunestoneBase {
                     if (discussionList.type === null) {
                         discussionList.create([]);
                     }
+                    if (discussionStat.type === null) {
+                        discussionStat.create([]);
+                    }
                     var time = String(new Date().getTime());
                     var dataLength = currentDocForDiscussion.data.length;
                     var listLength = discussionList.data.length;
@@ -2029,6 +2231,15 @@ export class ActiveCode extends RunestoneBase {
                           {
                             "type": "mrkdwn",
                             "text": "*Discussion problem:* " + slackurl
+                          }
+                        ]
+                      },
+                      {
+                        "type": "context",
+                        "elements": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Note*: only plain text reply is supported"
                           }
                         ]
                       },
@@ -2133,6 +2344,7 @@ export class ActiveCode extends RunestoneBase {
                             };
                             currentDocForDiscussion.submitOp([{ p: [dataLength], li: newData }]);
                             discussionList.submitOp([{p: [listLength], li: newList}]);
+                            discussionStat.submitOp([{p: [1], li: 1}]);
                             $("textarea#questInput" + problem_id).val("");
                             $('#questModal' + problem_id).modal('toggle');
                             showQuestDetailCallback(newData.id, newData.code, newData.index, problem_id);
@@ -2154,6 +2366,9 @@ export class ActiveCode extends RunestoneBase {
             var answerIndex = currentDocForDiscussion.data[currentQuestIndex].chat.length;
             var answerValue = inputCodeMirror.getValue();
             if (!answerValue.match(/^\s*$/)) {
+
+                discussionStat.submitOp([{p: [1], li: 2}]);
+
                 var answerCode = editor.getValue();
                 var latestNewCode = answerIndex;
                 if (answerIndex ==  0)
@@ -2215,7 +2430,7 @@ export class ActiveCode extends RunestoneBase {
                     li: currentDocForDiscussion.data[currentQuestIndex]}]);
                 inputCodeMirror.getDoc().setValue("");
                 inputCodeMirror.toTextArea();
-                var newInputCodeMirror = CodeMirror.fromTextArea(document.getElementById("inputTextArea" + problem_id), {
+                var newInputCodeMirror = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("inputTextArea" + problem_id), {
                     lineWrapping: true,
                     styleSelectedText: true,
                     mode: "null",
@@ -2353,7 +2568,7 @@ export class ActiveCode extends RunestoneBase {
           var codeIndex = currentDocForDiscussion.data[questIndex].chat[answerIndex].latestNewCodeIndex;
           editorHightlight.getDoc().setValue(currentDocForDiscussion.data[questIndex].chat[codeIndex].code);
           editorHightlight.toTextArea();
-          var newEditor = CodeMirror.fromTextArea(document.getElementById("codeTextAreaHighlight" + problem_id), {
+          var newEditor = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("codeTextAreaHighlight" + problem_id), {
               lineNumbers: true,
               styleSelectedText: true,
               mode: edmode,
@@ -2380,7 +2595,6 @@ export class ActiveCode extends RunestoneBase {
          * Display the discussion session for one question.
          * Used for "Show Question" and "Hide Question" button.
          */
-        var testDoc = connection_mini.get("ac2_5_1", "helpSession");
         function showQuestionList() {
           if ($("#showQuestButton" + problem_id)[0].innerHTML == "Show Question") {
             if (document.getElementById("inputDiv" + problem_id).style.display != 'none') {
