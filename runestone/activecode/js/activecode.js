@@ -20,7 +20,32 @@ import "./../css/activecode.css";
 import "codemirror/lib/codemirror.css";
 import codemirror from "codemirror";
 
+
 // activecode.js begins here
+
+/**
+ * Global variables used for shareDB socket listening.
+ */
+var socket, connection, doc;
+var chatcodesServer = "chat.codes";
+var currentUrl = window.location.href.split("#")[0].split("?")[0];
+var socket_mini, connection_mini;
+var socket_codecontent, connection_codecontent;
+const slackBotToken = '';
+const slackBotChannel = '';
+
+var isMouseDown = false;
+
+document.onmousedown = function () {
+    isMouseDown = true;
+};
+
+document.onmouseup = function () {
+    isMouseDown = false;
+};
+
+window.edList = {};
+
 function buildGlobalMenu() {
     if (document.getElementById("globalMenu")){
         return;
@@ -42,6 +67,7 @@ function buildGlobalMenu() {
     $(globalMenu).css("opacity", "0.9");
     menuInnerA.appendChild(globalMenu);
     // Add the discussion count in the button
+    /*
     var menuInnerB = document.createElement('a');
     menuInnerB.id = "globalCount";
     menuInnerB.innerHTML = "0";
@@ -52,8 +78,9 @@ function buildGlobalMenu() {
         position: absolute; top: 3px; right: 2px; background-color: red; \
         color: white; display: none;"
     );
+    */
     menu.appendChild(menuInnerA);
-    menu.appendChild(menuInnerB);
+    // menu.appendChild(menuInnerB);
     // Add the element to the html file
     rightNav.prepend(menu);
 
@@ -167,7 +194,7 @@ function buildGlobalStat() {
       "background: #fff; height: 40px; z-index: 9999; \
        top: 0px; border-bottom: 3px solid #dbdbdb; border-top: 3px solid #dbdbdb; font-size: 23px;"
   );
-  topInfo.innerHTML = "&nbsp;<span class='glyphicon glyphicon-info-sign' aria-hidden='true'></span>  &nbsp; Statistics Info";
+  topInfo.innerHTML = "&nbsp;<span class='glyphicon glyphicon-info-sign' aria-hidden='true'></span>  &nbsp; Statistics";
 
   sideBar.appendChild(topInfo);
 
@@ -201,44 +228,35 @@ function buildGlobalStat() {
 
 function changeNav() {
     var target = document.getElementById("sideBar");
-    if (target.style.width == "0px"){
-        // the sidebar is closed, button to open the sidebar
-        target.style.width = "300px";
-        document.getElementById("closeButton").style.left = "300px";
-        document.getElementById("closeButton").className = "glyphicon glyphicon-chevron-left";
-        document.getElementById("backBar").style.left = "300px";
-        // once open the menu, the globalMenu button will disappear style
-        document.getElementById("globalCount").style.display = "none";
-        document.getElementById("globalCount").innerHTML = "0";
-        document.getElementById("globalMenu").style.color = "";
-    } else {
-        // the sidebar is open, button to close the sidebar
-        target.style.width = "0px";
-        document.getElementById("closeButton").style.left = "0px";
-        document.getElementById("closeButton").className = "glyphicon glyphicon-chevron-right";
-        document.getElementById("backBar").style.left = "0px";
-    }
+    var flag = (target.style.width == "0px"); // true means the side bar is closed, false means is open
+    target.style.width = flag ? "300px" : "0px";
+    document.getElementById("closeButton").style.left = flag ? "300px" : "0px";
+    document.getElementById("closeButton").className = flag ? "glyphicon glyphicon-chevron-left" : "glyphicon glyphicon-chevron-right";
+    document.getElementById("backBar").style.left = flag ? "300px" : "0px";
+
     document.getElementById("sideBarStat").style.left = "0px";
     document.getElementById("sideBarStat").style.width = "0px";
     document.getElementById("closeButtonStat").style.left = "0px";
     document.getElementById("backBarStat").style.left = "0px";
     document.getElementById("closeButtonStat").className = "glyphicon glyphicon-chevron-right";
+
+    /*
+    if (flag) {
+      document.getElementById("globalCount").style.display = "none";
+      document.getElementById("globalCount").innerHTML = "0";
+      document.getElementById("globalMenu").style.color = "";
+    }
+    */
 }
 
 function changeStat() {
   var target = document.getElementById("sideBarStat");
-  if (target.style.width == "0px"){
-      target.style.width = "300px";
-      document.getElementById("closeButtonStat").style.left = "300px";
-      document.getElementById("closeButtonStat").className = "glyphicon glyphicon-chevron-left";
-      document.getElementById("backBarStat").style.left = "300px";
-      document.getElementById("globalStat").style.color = "";
-  } else {
-      target.style.width = "0px";
-      document.getElementById("closeButtonStat").style.left = "0px";
-      document.getElementById("closeButtonStat").className = "glyphicon glyphicon-chevron-right";
-      document.getElementById("backBarStat").style.left = "0px";
-  }
+  var flag = (target.style.width == "0px"); // true means the side bar is closed, false means is open
+  target.style.width = flag ? "300px" : "0px";
+  document.getElementById("closeButtonStat").style.left = flag ? "300px" : "0px";
+  document.getElementById("closeButtonStat").className = flag ? "glyphicon glyphicon-chevron-left" : "glyphicon glyphicon-chevron-right";
+  document.getElementById("backBarStat").style.left = flag ? "300px" : "0px";
+
   document.getElementById("sideBar").style.left = "0px";
   document.getElementById("sideBar").style.width = "0px";
   document.getElementById("closeButton").style.left = "0px";
@@ -368,29 +386,8 @@ class ShareDBCodeMirrorBinding {
     }
 }
 
-var isMouseDown = false;
-document.onmousedown = function () {
-    isMouseDown = true;
-};
-
-document.onmouseup = function () {
-    isMouseDown = false;
-};
-window.edList = {};
-
-/**
- * Global variables used for shareDB socket listening.
- */
-var socket, connection, doc;
-var chatcodesServer = "chat.codes";
-var currentUrl = window.location.href.split("#")[0].split("?")[0];
-var socket_mini, connection_mini;
-var socket_codecontent, connection_codecontent;
-const slackBotToken = 'xoxb-1345920338561-1342523238182-Dw707C0A5An2nH4PN713F2KF';
-const slackBotChannel = 'C019TEX7KFV';
-
 // separate into constructor and init
-class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
+export class ActiveCode extends RunestoneBase {
     constructor(opts) {
         super(opts);
         // RunestoneBase.prototype.init.apply(this, arguments);
@@ -532,7 +529,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
         codeTextArea.id = "codeTextArea" + this.divid;
         codeTextArea.value = this.code;
         codeDiv.appendChild(codeTextArea);
-        var editor = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("codeTextArea" + this.divid), {
+        var editor =  CodeMirror.fromTextArea(document.getElementById("codeTextArea" + this.divid), {
             lineNumbers: true,
             styleSelectedText: true,
             mode: edmode,
@@ -552,7 +549,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
         const codeTextAreaHighlight = document.createElement("textarea");
         codeTextAreaHighlight.id = "codeTextAreaHighlight" + this.divid;
         codeHightlightDiv.appendChild(codeTextAreaHighlight);
-        var editorHightlight = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("codeTextAreaHighlight" + this.divid), {
+        var editorHightlight =  CodeMirror.fromTextArea(document.getElementById("codeTextAreaHighlight" + this.divid), {
             lineNumbers: true,
             styleSelectedText: true,
             mode: edmode,
@@ -747,7 +744,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
             ctrlDiv.appendChild(butt);
             $(butt).click(
                 function () {
-                    new _audiotour__WEBPACK_IMPORTED_MODULE_1__["default"](
+                    new AudioTour(
                         this.divid,
                         this.code,
                         1,
@@ -1018,7 +1015,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
         this.discussionDiv.appendChild(inputDiv);
 
         // create input code mirror
-        var inputCodeMirror = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("inputTextArea" + this.divid), {
+        var inputCodeMirror = CodeMirror.fromTextArea(document.getElementById("inputTextArea" + this.divid), {
             lineWrapping: true,
             styleSelectedText: true,
             mode: "null",
@@ -1270,7 +1267,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                     var time = session.time.split(",")[0];
                     var problemId = session.problemId.split("_")[2];
                     var resolved = session.resolved;
-                    const search = document.getElementById("discussionList" + session.id);
+                    var search = document.getElementById("discussionList" + session.id);
                     if (!search) {
                         var contentA = document.createElement("a");
 
@@ -1458,6 +1455,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                 .remove();
             if (currentDocForDiscussion.type != null) {
                 let index = 1;
+                var votedFlag = 0;
                 currentDocForDiscussion.data.forEach((session) => {
                     var question = session.question;
                     var questId = session.id;
@@ -1534,7 +1532,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
 
                         var returnButton = document.createElement("button");
                         $(returnButton).addClass("ac_opt btn btn-default");
-                        $(returnButton).css("font-size", "10px");
+                        $(returnButton).css("font-size", "12px");
                         $(returnButton).css("float", "left");
                         var fig = document.createElement("span");
                         $(fig).addClass("glyphicon glyphicon-arrow-left");
@@ -1546,7 +1544,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                         var resolvedButton = document.createElement("button");
                         resolvedButton.id = "detailResolvedDiv" + problem_id + questId;
                         $(resolvedButton).addClass("ac_opt btn btn-default");
-                        $(resolvedButton).css("padding", "3px 6px 3px 6px");
+                        // $(resolvedButton).css("padding", "3px 6px 3px 6px");
                         $(resolvedButton).css("float", "right");
                         if (session.resolved){
                           $(resolvedButton).text("Mark as Resolved");
@@ -1566,9 +1564,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                         $(titleLeft).css("white-space", "nowrap");
                         $(titleLeft).css("overflow", "hidden");
                         $(titleRight).css("float", "right");
-                        $(titleRight).css("margin-top", "10px");
-                        $(titleRight).css("margin-right", "5px");
-                        $(titleRight).css("width", "150px");
+                        $(titleRight).css("margin-top", "12px");
 
                         var titleIndex = document.createElement("b");
                         titleIndex.innerHTML = "Q" + (index-1) + ":";
@@ -1587,12 +1583,9 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                     }
 
                     var resolvedUpdateButton = document.getElementById("detailResolvedDiv" + problem_id + questId);
-                    //var flag = 0;
                     if (session.resolved){
-                      //flag = 1; 
                       $(resolvedUpdateButton).text("Mark as Unresolved");
                     } else {
-                      //flag = 0;
                       $(resolvedUpdateButton).text("Mark as Resolved");
                     }
 
@@ -1671,10 +1664,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                             
                             if (index < answer.length) {
                                 var text = answer.substring(index, answer.length);
-                                //console.log(text);
                                 var textSpan = document.createElement("span");
-                                //var converter = new showdown.Converter();
-                                //var html = converter.makeHtml(text);
                                 textSpan.innerHTML = text;
                                 responseDiv.appendChild(textSpan);
                                 
@@ -1693,7 +1683,6 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                             $(likeButton).css("cursor", "pointer");
                             $(likeButton).css("color", "red");
                             $(likeButton).attr("title", "like");
-                            $(textTime).css("margin-right", "5px");
                             likeButton.id = "like" + problem_id + session.index + ans.index;
                             if (ans.likes.length > 0 && ans.likes.indexOf(eBookConfig.username) > -1) {
                               $(likeButton).addClass("glyphicon glyphicon-heart");
@@ -1709,6 +1698,13 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
 
                             var textTime = document.createElement("span");
                             textTime.innerText = ans.time;
+                            if (likeCount == maxLike && maxLike != 0 && votedFlag == 0) {
+                              // && document.getElementById("detailDiv" + problem_id + questId).style.display == "none"
+                              // add choice to show immediately
+                              textTime.innerText += " Top liked response !";
+                              $(textTime).css("color", "red");
+                              votedFlag = 1;
+                            }
                             $(textTime).css("float", "right");
                             $(textTime).css("margin-right", "10px");
                             responseDiv.appendChild(textTime);
@@ -1763,10 +1759,6 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                                 // $(responseDiv).css("background-color","#eeeeee");
                             }
 
-                            if (likeCount == maxLike && maxLike != 0 && document.getElementById("detailDiv" + problem_id + questId).style.display == "none"){
-                                // the most like element
-                                $(responseDiv).css("background-color","#eeeeee");
-                            }
                             
                             if (answer.length != 0){
                               // omit uploading the figure
@@ -1809,7 +1801,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
           // 3 means one resolved
           // 4 means cancel one resolved
           var a=0,b=0,c=0,d=0;
-          console.log(discussionStat);
+          //console.log(discussionStat);
           if (discussionStat.data != null){
               for (var i = 0; i < discussionStat.data.length; ++i){
                 if (discussionStat.data[i] == 1){
@@ -1825,23 +1817,96 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                   ++d;
                 }
               }
-              console.log(discussionStat);
+              // console.log(discussionStat);
+              // store list of unsolved posts info
+              var postQuestion = new Array();
+              var postLink = new Array();
+              var postTime = new Array();
+              if (discussionList.type != null){
+                discussionList.data.forEach((session) =>{
+                  if (!session.resolved){
+                    postQuestion.push(session.question);
+                    var str = session.url;
+                    var old = str.split("#")[0];
+                    var hash = str.split("#")[1];
+                    postLink.push(old + "?arg="  + session.index + "#" + hash);
+                    postTime.push(session.time);
+                  }
+                });
+              }
+              // postX from the long-time unresolved posts to recent
+              var len = postQuestion.length;
+
+              console.log(postQuestion);
+              console.log(postLink);
               var block1 = document.createElement("div");
+              $(block1).css("font-size", "18px");
+              $(block1).css("margin", "5px");
+              $(block1).css("border", "3px solid #dbdbdb");
+              $(block1).css("background", "#fff");
+              block1.innerHTML = "<Strong>Class At A Glance</Strong> <br>" + "Total posts: " + a + "<br>" + "Total responses: " + b + "<br>" + "Unresolved posts: " + (a-c+d);
+
               var block2 = document.createElement("div");
+              $(block2).css("font-size", "18px");
+              $(block2).css("margin", "5px");
+              $(block2).css("border", "3px solid #dbdbdb");
+              $(block2).css("background", "#fff");
+              block2.innerHTML = "<div><Strong>Recent unresolved posts</Strong></div>";
+              var b1;
+              for (var i = len-1; i > len/2; --i){
+                b1 = document.createElement("div");
+                $(b1).css("border-top", "3px solid #dbdbdb");
+                b1.innerHTML = "Problem: " + postQuestion[i] + "<br>" + "Time: " + postTime[i];
+                
+                /*
+                $(b1).mousemove(function(){
+                  $(b1).css("background-color","#FFE4C4");
+                });
+                $(b1).mouseleave(function(){
+                    $(b1).css("background-color","white");
+                });
+                console.log(i);
+                b1.onclick = function () {
+                  window.open(postLink[i]);
+                }
+                */
+                block2.appendChild(b1);
+              }
+
               var block3 = document.createElement("div");
-              var block4 = document.createElement("div");
-              $(block1).css("font-size", "25px");
-              $(block2).css("font-size", "25px");
-              $(block3).css("font-size", "25px");
-              $(block4).css("font-size", "25px");
-              block1.innerHTML = "Total posts: " + a;
-              block2.innerHTML = "Total responses: " + b;
-              block3.innerHTML = "Unresolved posts: " + (a-c+d);
+              $(block3).css("font-size", "18px");
+              $(block3).css("margin", "5px");
+              $(block3).css("border", "3px solid #dbdbdb");
+              $(block3).css("background", "#fff");
+              block3.innerHTML = "<div><Strong>Long-time unresolved posts</Strong></div>";
+              for (var i = 0; i <= len/2; ++i){
+                b1 = document.createElement("div");
+                $(b1).css("border-top", "3px solid #dbdbdb");
+                b1.innerHTML = "Problem: " + postQuestion[i] + "<br>" + "Time: " + postTime[i];
+
+                /*
+                $(b1).mousemove(function(){
+                  $(b1).css("background-color","#FFE4C4");
+                });
+                $(b1).mouseleave(function(){
+                    $(b1).css("background-color","white");
+                });
+                b1.onclick = function () {
+                  window.open(postLink[i]);
+                }
+                */
+                block3.appendChild(b1);
+              }
+
+
               info.appendChild(block1);
               info.appendChild(block2);
               info.appendChild(block3);
-              //info.appendChild(block4);
+
           }
+
+          
+
         }
         /**
          * Change the resolved status of each discussion.
@@ -1905,15 +1970,6 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                       "elements": [
                         {
                           "type": "mrkdwn",
-                          "text": "*Note*: only plain text reply is supported"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "context",
-                      "elements": [
-                        {
-                          "type": "mrkdwn",
                           "text": "*Code*:" + "```" + editorCode + "```"
                         }
                       ]
@@ -1944,15 +2000,6 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                         {
                           "type": "mrkdwn",
                           "text": "*Discussion problem:* " + slackurl
-                        }
-                      ]
-                    },
-                    {
-                      "type": "context",
-                      "elements": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Note*: only plain text reply is supported"
                         }
                       ]
                     },
@@ -2182,7 +2229,6 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                     var dataLength = currentDocForDiscussion.data.length;
                     var listLength = discussionList.data.length;
   
-                    // TODO: slack
                     var slackurl = '<' + currentUrl + "#" + problem_id + '|' + inputquestion + '>';
                     var quest = $("div[data-childcomponent='" + problem_id + "'] p:first-child").text();
                     if (quest == ''){quest = "Not Assessment Chapter";}
@@ -2231,15 +2277,6 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                           {
                             "type": "mrkdwn",
                             "text": "*Discussion problem:* " + slackurl
-                          }
-                        ]
-                      },
-                      {
-                        "type": "context",
-                        "elements": [
-                          {
-                            "type": "mrkdwn",
-                            "text": "*Note*: only plain text reply is supported"
                           }
                         ]
                       },
@@ -2430,7 +2467,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
                     li: currentDocForDiscussion.data[currentQuestIndex]}]);
                 inputCodeMirror.getDoc().setValue("");
                 inputCodeMirror.toTextArea();
-                var newInputCodeMirror = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("inputTextArea" + problem_id), {
+                var newInputCodeMirror = CodeMirror.fromTextArea(document.getElementById("inputTextArea" + problem_id), {
                     lineWrapping: true,
                     styleSelectedText: true,
                     mode: "null",
@@ -2568,7 +2605,7 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
           var codeIndex = currentDocForDiscussion.data[questIndex].chat[answerIndex].latestNewCodeIndex;
           editorHightlight.getDoc().setValue(currentDocForDiscussion.data[questIndex].chat[codeIndex].code);
           editorHightlight.toTextArea();
-          var newEditor = codemirror__WEBPACK_IMPORTED_MODULE_3___default.a.fromTextArea(document.getElementById("codeTextAreaHighlight" + problem_id), {
+          var newEditor = CodeMirror.fromTextArea(document.getElementById("codeTextAreaHighlight" + problem_id), {
               lineNumbers: true,
               styleSelectedText: true,
               mode: edmode,
@@ -2613,7 +2650,6 @@ class ActiveCode extends _common_js_runestonebase_js__WEBPACK_IMPORTED_MODULE_0_
           else {
             document.getElementById("codeHightlight" + problem_id).style.display = 'none';
             document.getElementById("code" + problem_id).style.display = '';
-            //document.getElementById("inputDiv" + problem_id).style.display = 'none';
             document.getElementById("answerLinkButton" + problem_id).style.display = 'none';
             document.getElementById("answerSubmitButton" + problem_id).style.display = 'none';
             document.getElementById("submitButton" + problem_id).style.display = 'none';
